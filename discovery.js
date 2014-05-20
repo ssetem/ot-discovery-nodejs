@@ -91,7 +91,7 @@ DiscoveryClient.prototype.poll = function () {
   request(url, function (error, response, body) {
     if (error) {
       var error = "Unable to watch discovery: " + error;
-      disco.errorHandlers.forEach(function (h) { h.call(error); });
+      disco.errorHandlers.forEach(function (h) { h(error); });
       disco._schedule();
       return;
     }
@@ -101,7 +101,7 @@ DiscoveryClient.prototype.poll = function () {
     }
     if (response.statusCode != 200) {
       var error = "Bad status code " + response.statusCode + " from watch: " + response;
-      disco.errorHandlers.forEach(function (h) { h.call(error); });
+      disco.errorHandlers.forEach(function (h) { h(error); });
       disco._schedule();
       return;
     }
