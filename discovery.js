@@ -63,14 +63,17 @@ DiscoveryClient.prototype.connect = function (onComplete) {
   });
 };
 
+/* Register a callback on every discovery update */
 DiscoveryClient.prototype.onUpdate = function (watcher) {
   this.watchers.push(watcher);
 }
 
+/* Register a callback on every error */
 DiscoveryClient.prototype.onError = function (handler) {
   this.errorHandlers.push(handler);
 }
 
+/* Internal scheduling method.  Schedule the next poll in the event loop */
 DiscoveryClient.prototype._schedule = function() {
   var c = this.poll.bind(this);
   if (this.backoff <= 1) {
@@ -80,6 +83,7 @@ DiscoveryClient.prototype._schedule = function() {
   }
 }
 
+/* Long-poll the discovery server for changes */
 DiscoveryClient.prototype.poll = function () {
   var disco = this;
   var server = this.servers[Math.floor(Math.random()*this.servers.length)];
@@ -108,6 +112,7 @@ DiscoveryClient.prototype.poll = function () {
   });
 };
 
+/* Lookup a service by service type! */
 DiscoveryClient.prototype.find = function (serviceType) {
   var disco = this;
   var candidates = [];
