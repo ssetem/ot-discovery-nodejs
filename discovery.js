@@ -182,7 +182,8 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
   });
 }
 
-/* Remove a previous announcement */
+/* Remove a previous announcement.  The passed object *must* be the
+ * lease as returned by the 'announce' callback. */
 DiscoveryClient.prototype.unannounce = function (announcement) {
   var server = this._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
