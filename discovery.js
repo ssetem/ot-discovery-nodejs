@@ -1,4 +1,5 @@
 var request = require("request");
+var logger = require("ot-logger");
 
 /*
  * DiscoveryClient constructor.
@@ -192,10 +193,10 @@ DiscoveryClient.prototype.unannounce = function (announcement) {
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      console.error(error);
+      logger.error(error);
       return;
     }
-    console.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+    logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
   });
 }
 

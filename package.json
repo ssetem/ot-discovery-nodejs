@@ -8,6 +8,7 @@
   },
   "author": "Steven Schlansker",
   "dependencies": {
+    "ot-logger": "^0.0.11",
     "require": "^0.5.0",
     "request": "2.33.0"
   }
