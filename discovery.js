@@ -42,16 +42,18 @@ DiscoveryClient.prototype._update = function (update) {
 /* Connect to the Discovery servers given the endpoint of any one of them */
 DiscoveryClient.prototype.connect = function (onComplete) {
   var disco = this;
-  request("http://" + this.host + "/watch", function (error, response, body) {
+  request({
+    url: "http://" + this.host + "/watch",
+    json: true
+  }, function (error, response, update) {
     if (error) {
-      onComplete("Unable to initiate discovery: " + error, undefined, undefined);
+      onComplete(error);
     }
     if (response.statusCode != 200) {
-      onComplete("Unable to initiate discovery: " + body, undefined, undefined);
+      onComplete(new Error("Unable to initiate discovery: " + update), undefined, undefined);
     }
-    var update = JSON.parse(body);
     if (!update.fullUpdate) {
-      onComplete("Expecting a full update: " + update, undefined, undefined);
+      onComplete(new Error("Expecting a full update: " + update), undefined, undefined);
     }
     disco._update(update);
 
@@ -95,10 +97,12 @@ DiscoveryClient.prototype.poll = function () {
   var disco = this;
   var server = this._randomServer();
   var url = server + "/watch?since=" + (this.state.index + 1);
-  request(url, function (error, response, body) {
+  request({
+    url: url,
+    json: true
+  }, function (error, response, body) {
     if (error) {
-      var errorMsg = "Unable to watch discovery: " + error;
-      disco.errorHandlers.forEach(function (h) { h(errorMsg); });
+      disco.errorHandlers.forEach(function (h) { h(error); });
       disco._schedule();
       return;
     }
@@ -107,13 +111,12 @@ DiscoveryClient.prototype.poll = function () {
       return;
     }
     if (response.statusCode != 200) {
-      var error = "Bad status code " + response.statusCode + " from watch: " + response;
+      var error = new Error("Bad status code " + response.statusCode + " from watch: " + response);
       disco.errorHandlers.forEach(function (h) { h(error); });
       disco._schedule();
       return;
     }
-    var response = JSON.parse(body);
-    disco.watchers.forEach(function (w) { w(response); });
+    disco.watchers.forEach(function (w) { w(body); });
     disco._schedule();
   });
 };
@@ -151,19 +154,15 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
   request({
     url: server + "/announcement",
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(announcement)
+    json: true,
+    body: announcement
   }, function (error, response, body) {
     if (error) {
-      var errorMsg = "Unable to announce: " + error;
-      cb(errorMsg);
+      cb(error);
       return;
     }
     if (response.statusCode != 201) {
-      var errorMsg = "During announce, bad status code " + response.statusCode + ": " + body;
-      cb(errorMsg);
+      cb(new Error("During announce, bad status code " + response.statusCode + ": " + body));
       return;
     }
     cb(undefined, JSON.parse(body));
