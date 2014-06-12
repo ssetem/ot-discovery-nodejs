@@ -9,6 +9,7 @@ function DiscoveryClient(host) {
   this.state = {announcements: {}};
   this.errorHandlers = [this._backoff.bind(this)];
   this.watchers = [this._update.bind(this), this._unbackoff.bind(this)];
+  this.announcements = [];
   this.backoff = 1;
 }
 
@@ -20,6 +21,10 @@ DiscoveryClient.prototype._backoff = function () {
 /* Reset the watch backoff interval */
 DiscoveryClient.prototype._unbackoff = function() {
   this.backoff = 1;
+}
+
+DiscoveryClient.prototype._randomServer = function() {
+  return this.servers[Math.floor(Math.random()*this.servers.length)];
 }
 
 /* Consume a WatchResult from the discovery server and update internal state */
@@ -59,6 +64,7 @@ DiscoveryClient.prototype.connect = function (onComplete) {
     });
 
     disco._schedule();
+    setInterval(disco._announce.bind(disco), 10000);
     onComplete(undefined, disco.host, disco.servers);
   });
 };
@@ -77,7 +83,7 @@ DiscoveryClient.prototype.onError = function (handler) {
 DiscoveryClient.prototype._schedule = function() {
   var c = this.poll.bind(this);
   if (this.backoff <= 1) {
-    setImmediate(c);    
+    setImmediate(c);
   } else {
     setTimeout(c, this.backoff).unref();
   }
@@ -86,12 +92,12 @@ DiscoveryClient.prototype._schedule = function() {
 /* Long-poll the discovery server for changes */
 DiscoveryClient.prototype.poll = function () {
   var disco = this;
-  var server = this.servers[Math.floor(Math.random()*this.servers.length)];
+  var server = this._randomServer();
   var url = server + "/watch?since=" + (this.state.index + 1);
   request(url, function (error, response, body) {
     if (error) {
-      var error = "Unable to watch discovery: " + error;
-      disco.errorHandlers.forEach(function (h) { h(error); });
+      var errorMsg = "Unable to watch discovery: " + error;
+      disco.errorHandlers.forEach(function (h) { h(errorMsg); });
       disco._schedule();
       return;
     }
@@ -106,7 +112,6 @@ DiscoveryClient.prototype.poll = function () {
       return;
     }
     var response = JSON.parse(body);
-    console.log(response);
     disco.watchers.forEach(function (w) { w(response); });
     disco._schedule();
   });
@@ -126,6 +131,72 @@ DiscoveryClient.prototype.find = function (serviceType) {
     return undefined;
   }
   return candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+DiscoveryClient.prototype._announce = function() {
+  var disco = this;
+  function cb(error, announcement) {
+    if (error) {
+      disco.errorHandlers.forEach(function (h) { h(error); });
+    }
+  }
+  this.announcements.forEach(function (a) {
+    disco._singleAnnounce(a, cb);
+  });
+}
+
+DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
+  var server = this._randomServer();
+  request({
+    url: server + "/announcement",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(announcement)
+  }, function (error, response, body) {
+    if (error) {
+      var errorMsg = "Unable to announce: " + error;
+      cb(errorMsg);
+      return;
+    }
+    if (response.statusCode != 201) {
+      var errorMsg = "During announce, bad status code " + response.statusCode + ": " + body;
+      cb(errorMsg);
+      return;
+    }
+    cb(undefined, JSON.parse(body));
+  });
+}
+
+/* Announce ourselves to the registry */
+DiscoveryClient.prototype.announce = function (announcement, cb) {
+  var disco = this;
+  this._singleAnnounce(announcement, function(error, a) {
+    if (error) {
+      cb(error);
+      return;
+    }
+    disco.announcements.push(a);
+    cb(undefined, a);
+  });
+}
+
+/* Remove a previous announcement */
+DiscoveryClient.prototype.unannounce = function (announcement) {
+  var server = this._randomServer();
+  var url = server + "/announcement/" + announcement.announcementId;
+  this.announcements.splice(this.announcements.indexOf(announcement), 1);
+  request({
+    url: url,
+    method: "DELETE"
+  }, function (error, response, body) {
+    if (error) {
+      console.error(error);
+      return;
+    }
+    console.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+  });
 }
 
 exports.DiscoveryClient = DiscoveryClient;
