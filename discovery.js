@@ -165,7 +165,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
       cb(new Error("During announce, bad status code " + response.statusCode + ": " + body));
       return;
     }
-    cb(undefined, JSON.parse(body));
+    cb(undefined, body);
   });
 }
 
@@ -177,6 +177,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
+    logger.log("Announced as " + a);
     disco.announcements.push(a);
     cb(undefined, a);
   });
