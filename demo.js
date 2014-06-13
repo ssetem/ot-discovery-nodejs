@@ -1,6 +1,6 @@
 var discovery = require('./discovery');
 
-var disco = new discovery.DiscoveryClient("discovery-proxy.proxy.mesos-vpcqa.otenv.com");
+var disco = new discovery("discovery-proxy.proxy.mesos-vpcqa.otenv.com");
 disco.onError(function(error) {
   console.warn(error);
 });

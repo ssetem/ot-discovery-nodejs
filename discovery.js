@@ -201,4 +201,4 @@ DiscoveryClient.prototype.unannounce = function (announcement) {
   });
 }
 
-exports.DiscoveryClient = DiscoveryClient;
+module.exports = DiscoveryClient;
