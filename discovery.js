@@ -127,7 +127,7 @@ DiscoveryClient.prototype.poll = function () {
  *   serviceType:feature as string
  *   predicate function over announcement object
  */
-DiscoveryClient.prototype.find = function (predicate) {
+DiscoveryClient.prototype.findAll = function (predicate) {
   var disco = this;
   var candidates = [];
 
@@ -144,6 +144,12 @@ DiscoveryClient.prototype.find = function (predicate) {
       candidates.push(a.serviceUri);
     }
   });
+
+  return candidates;
+}
+
+DiscoveryClient.prototype.find = function (predicate) {
+  var candidates = this.findAll(predicate);
   if (candidates.length == 0) {
     return undefined;
   }
