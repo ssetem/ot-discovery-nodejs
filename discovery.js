@@ -121,13 +121,26 @@ DiscoveryClient.prototype.poll = function () {
   });
 };
 
-/* Lookup a service by service type! */
-DiscoveryClient.prototype.find = function (serviceType) {
+/* Lookup a service by service type!
+ * Accepts one of:
+ *   serviceType as string
+ *   serviceType:feature as string
+ *   predicate function over announcement object
+ */
+DiscoveryClient.prototype.find = function (predicate) {
   var disco = this;
   var candidates = [];
+
+  if (typeof(predicate) != "function") {
+    var serviceType = predicate;
+    predicate = function(announcement) {
+      return a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType;
+    };
+  }
+
   Object.keys(disco.state.announcements).forEach(function (id) {
     var a = disco.state.announcements[id];
-    if (a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType) {
+    if (predicate(a)) {
       candidates.push(a.serviceUri);
     }
   });
