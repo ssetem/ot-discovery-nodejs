@@ -1,17 +1,17 @@
 var request = require("request");
-var logger = require("ot-logger");
 
 /*
  * DiscoveryClient constructor.
  * Creates a new uninitialized DiscoveryClient.
  */
-function DiscoveryClient(host) {
+function DiscoveryClient(host, options) {
   this.host = host;
   this.state = {announcements: {}};
   this.errorHandlers = [this._backoff.bind(this)];
   this.watchers = [this._update.bind(this), this._unbackoff.bind(this)];
   this.announcements = [];
   this.backoff = 1;
+  this.logger = (options && options.logger) || require("ot-logger");
 }
 
 /* Increase the watch backoff interval */
@@ -177,7 +177,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    logger.log("Announced as " + a);
+    disco.logger.log("Announced as " + a);
     disco.announcements.push(a);
     cb(undefined, a);
   });
@@ -186,18 +186,19 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
 DiscoveryClient.prototype.unannounce = function (announcement) {
-  var server = this._randomServer();
+  var disco = this;
+  var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
-  this.announcements.splice(this.announcements.indexOf(announcement), 1);
+  disco.announcements.splice(disco.announcements.indexOf(announcement), 1);
   request({
     url: url,
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      logger.error(error);
+      disco.logger.error(error);
       return;
     }
-    logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+    disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
   });
 }
 
