@@ -127,7 +127,7 @@ DiscoveryClient.prototype.find = function (serviceType) {
   var candidates = [];
   Object.keys(disco.state.announcements).forEach(function (id) {
     var a = disco.state.announcements[id];
-    if (a.serviceType == serviceType) {
+    if (a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType) {
       candidates.push(a.serviceUri);
     }
   });
