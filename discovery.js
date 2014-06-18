@@ -196,14 +196,11 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
   }, function (error, response, body) {
     if (error) {
       disco.logger.error(error);
-	  if (callback) {
-		  callback();
-	  }
-	  return;
+    } else {
+      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
     }
-    disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
     if (callback) {
-	  callback();
+      callback();
     }
   });
 }
