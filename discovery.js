@@ -185,7 +185,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
 
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
-DiscoveryClient.prototype.unannounce = function (announcement) {
+DiscoveryClient.prototype.unannounce = function (announcement, callback) {
   var disco = this;
   var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
@@ -196,9 +196,15 @@ DiscoveryClient.prototype.unannounce = function (announcement) {
   }, function (error, response, body) {
     if (error) {
       disco.logger.error(error);
-      return;
+	  if (callback) {
+		  callback();
+	  }
+	  return;
     }
     disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+    if (callback) {
+	  callback();
+    }
   });
 }
 
