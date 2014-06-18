@@ -1,17 +1,17 @@
 var request = require("request");
-var logger = require("ot-logger");
 
 /*
  * DiscoveryClient constructor.
  * Creates a new uninitialized DiscoveryClient.
  */
-function DiscoveryClient(host) {
+function DiscoveryClient(host, options) {
   this.host = host;
   this.state = {announcements: {}};
   this.errorHandlers = [this._backoff.bind(this)];
   this.watchers = [this._update.bind(this), this._unbackoff.bind(this)];
   this.announcements = [];
   this.backoff = 1;
+  this.logger = (options && options.logger) || require("ot-logger");
 }
 
 /* Increase the watch backoff interval */
@@ -121,16 +121,35 @@ DiscoveryClient.prototype.poll = function () {
   });
 };
 
-/* Lookup a service by service type! */
-DiscoveryClient.prototype.find = function (serviceType) {
+/* Lookup a service by service type!
+ * Accepts one of:
+ *   serviceType as string
+ *   serviceType:feature as string
+ *   predicate function over announcement object
+ */
+DiscoveryClient.prototype.findAll = function (predicate) {
   var disco = this;
   var candidates = [];
+
+  if (typeof(predicate) != "function") {
+    var serviceType = predicate;
+    predicate = function(announcement) {
+      return a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType;
+    };
+  }
+
   Object.keys(disco.state.announcements).forEach(function (id) {
     var a = disco.state.announcements[id];
-    if (a.serviceType == serviceType) {
+    if (predicate(a)) {
       candidates.push(a.serviceUri);
     }
   });
+
+  return candidates;
+}
+
+DiscoveryClient.prototype.find = function (predicate) {
+  var candidates = this.findAll(predicate);
   if (candidates.length == 0) {
     return undefined;
   }
@@ -177,7 +196,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    logger.log("Announced as " + a);
+    disco.logger.log("Announced as " + a);
     disco.announcements.push(a);
     cb(undefined, a);
   });
@@ -185,19 +204,23 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
 
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
-DiscoveryClient.prototype.unannounce = function (announcement) {
-  var server = this._randomServer();
+DiscoveryClient.prototype.unannounce = function (announcement, callback) {
+  var disco = this;
+  var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
-  this.announcements.splice(this.announcements.indexOf(announcement), 1);
+  disco.announcements.splice(disco.announcements.indexOf(announcement), 1);
   request({
     url: url,
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      logger.error(error);
-      return;
+      disco.logger.error(error);
+    } else {
+      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
     }
-    logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+    if (callback) {
+      callback();
+    }
   });
 }
 
