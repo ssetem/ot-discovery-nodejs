@@ -51,9 +51,11 @@ DiscoveryClient.prototype.connect = function (onComplete) {
     }
     if (response.statusCode != 200) {
       onComplete(new Error("Unable to initiate discovery: " + update), undefined, undefined);
+      return;
     }
     if (!update.fullUpdate) {
       onComplete(new Error("Expecting a full update: " + update), undefined, undefined);
+      return;
     }
     disco._update(update);
 
