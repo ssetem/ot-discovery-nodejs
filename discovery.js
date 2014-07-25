@@ -48,6 +48,7 @@ DiscoveryClient.prototype.connect = function (onComplete) {
   }, function (error, response, update) {
     if (error) {
       onComplete(error);
+      return;
     }
     if (response.statusCode != 200) {
       onComplete(new Error("Unable to initiate discovery: " + update), undefined, undefined);
