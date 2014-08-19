@@ -1,6 +1,11 @@
 var discovery = require('./discovery');
 
-var disco = new discovery("discovery-proxy.proxy.mesos-vpcqa.otenv.com");
+var disco = new discovery("discovery-proxy.proxy.mesos-vpcqa.otenv.com", {
+  logger: {
+    log: function(log){ console.log(log); },
+    error: function(error){ console.log(error); },
+  }
+});
 disco.onError(function(error) {
   console.warn(error);
 });
