@@ -200,7 +200,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    disco.logger.log("Announced as " + a.serviceType);
+    disco.logger.log("Announced as " + JSON.stringify(a));
     disco.announcements.push(a);
     cb(undefined, a);
   });
