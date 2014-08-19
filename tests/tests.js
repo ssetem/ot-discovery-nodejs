@@ -1,0 +1,3 @@
+describe('discovery client', function(){
+  
+});
