@@ -136,7 +136,7 @@ DiscoveryClient.prototype.findAll = function (predicate) {
 
   if (typeof(predicate) != "function") {
     var serviceType = predicate;
-    predicate = function(announcement) {
+    predicate = function(a) {
       return a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType;
     };
   }
