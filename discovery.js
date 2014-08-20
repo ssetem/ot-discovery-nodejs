@@ -51,11 +51,12 @@ DiscoveryClient.prototype.connect = function (onComplete) {
       return;
     }
     if (response.statusCode != 200) {
-      onComplete(new Error("Unable to initiate discovery: " + update), undefined, undefined);
+      onComplete(new Error("Unable to initiate discovery: " + JSON.stringify(update)), undefined, undefined);
       return;
     }
+
     if (!update.fullUpdate) {
-      onComplete(new Error("Expecting a full update: " + update), undefined, undefined);
+      onComplete(new Error("Expecting a full update: " + JSON.stringify(update)), undefined, undefined);
       return;
     }
     disco._update(update);
@@ -184,7 +185,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
       return;
     }
     if (response.statusCode != 201) {
-      cb(new Error("During announce, bad status code " + response.statusCode + ": " + body));
+      cb(new Error("During announce, bad status code " + response.statusCode + ": " + JSON.stringify(body)));
       return;
     }
     cb(undefined, body);
@@ -219,7 +220,7 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     if (error) {
       disco.logger.error(error);
     } else {
-      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
     if (callback) {
       callback();
