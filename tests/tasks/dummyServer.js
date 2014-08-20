@@ -1,7 +1,5 @@
 var http = require("http"),
-    fs = require("fs"),
     server = {},
-    requestFile = fs.openSync('tests/actual/request.json', 'w'),
     fullUpdate = {
       fullUpdate: true,
       index: 1,
