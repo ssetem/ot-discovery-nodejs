@@ -7,15 +7,20 @@ var http = require("http"),
       updates: [
         {
           serviceType: 'discovery',
-          annoucementId: '1234-5678',
+          announcementId: '1',
           serviceUri: 'http://127.0.0.1:8888'
+        },
+        {
+          serviceType: 'myservice',
+          announcementId: '2',
+          serviceUri: 'http://myservice-1.domain.com'
         }
       ]
     },
     lease = {
       serviceType: 'myservice',
-      annoucementId: '1234-5678',
-      serviceUri: 'http://myservice.domain.com'
+      announcementId: '3',
+      serviceUri: 'http://myservice-2.domain.com'
     };
 
 module.exports = function(grunt){
@@ -28,7 +33,7 @@ module.exports = function(grunt){
             response.writeHead(200, {"content-type": "application/json"});
             response.write(JSON.stringify(fullUpdate));
           }
-          
+
           response.end();
         }).listen(8888);
     });
