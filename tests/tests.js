@@ -52,7 +52,8 @@ describe('discovery', function(){
 
   it('should return all servers for serviceType', function(){
     disco.findAll("myservice",function(result){
-      result.should.eql("http://myservice.domain.com");
+      result.length.should.eql(1);
+      result[0].should.eql("http://myservice.domain.com");
       done();
     });
   });
