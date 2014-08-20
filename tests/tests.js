@@ -44,17 +44,13 @@ describe('discovery', function(){
   });
 
   it('should pick a random server by serviceType', function(){
-    disco.find("myservice",function(result){
-      result.should.eql("http://myservice.domain.com");
-      done();
-    });
+    var result = disco.find("myservice");
+    result.should.eql("http://myservice.domain.com");
   });
 
   it('should return all servers for serviceType', function(){
-    disco.findAll("myservice",function(result){
-      result.length.should.eql(1);
-      result[0].should.eql("http://myservice.domain.com");
-      done();
-    });
+    var result = disco.findAll("myservice");
+    result.length.should.eql(1);
+    result[0].should.eql("http://myservice.domain.com");
   });
 });
