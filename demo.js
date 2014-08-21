@@ -26,4 +26,4 @@ disco.connect(function(error, host, servers) {
   });
 });
 
-setInterval(function() { console.log("Demo service at: " + disco.find("demo")); }, 5000);
+setInterval(function() { console.log("Demo service at: " + disco.find("node-discovery-demo")); }, 5000);
