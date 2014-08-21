@@ -7,11 +7,11 @@ var request = require("request");
 function DiscoveryClient(host, options) {
   this.host = host;
   this.state = {announcements: {}};
-  this.errorHandlers = [this._backoff.bind(this)];
-  this.watchers = [this._update.bind(this), this._unbackoff.bind(this)];
+  this.logger = (options && options.logger) || require("ot-logger");
+  this.errorHandlers = [this._backoff.bind(this), this.logger.error.bind(this)];
+  this.watchers = [this._update.bind(this), this._unbackoff.bind(this), this.logger.log.bind(this)];
   this.announcements = [];
   this.backoff = 1;
-  this.logger = (options && options.logger) || require("ot-logger");
 }
 
 /* Increase the watch backoff interval */
