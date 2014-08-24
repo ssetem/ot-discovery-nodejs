@@ -15,7 +15,6 @@
   },
   "author": "Steven Schlansker",
   "dependencies": {
-    "ot-logger": "^0.0.13",
     "request": "2.33.0",
     "require": "^0.5.0",
     "should": "^4.0.4"
@@ -25,5 +24,8 @@
     "grunt-cli": "^0.1.13",
     "grunt-contrib-jshint": "^0.10.0",
     "grunt-mocha-test": "^0.11.0"
+  },
+  "optionalDependencies": {
+    "ot-logger": "^0.0.14"
   }
 }
