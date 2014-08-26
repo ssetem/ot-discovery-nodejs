@@ -10,20 +10,26 @@
     "type": "git",
     "url": "git://github.com/opentable/ot-discovery-nodejs.git"
   },
-  "publishConfig": {
-    "registry": "http://artifactory.otenv.com:8081/artifactory/api/npm/npm-local"
-  },
   "author": "Steven Schlansker",
   "dependencies": {
-    "ot-logger": "^0.0.13",
-    "request": "2.33.0",
-    "require": "^0.5.0",
-    "should": "^4.0.4"
+    "request": "2.33.0"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-cli": "^0.1.13",
     "grunt-contrib-jshint": "^0.10.0",
-    "grunt-mocha-test": "^0.11.0"
-  }
+    "grunt-mocha-test": "^0.11.0",
+    "should": "^4.0.4"
+  },
+  "optionalDependencies": {
+    "ot-logger": "^0.0.14"
+  },
+  "bugs": {
+    "url": "https://github.com/opentable/ot-discovery-nodejs/issues"
+  },
+  "homepage": "https://github.com/opentable/ot-discovery-nodejs",
+  "directories": {
+    "test": "tests"
+  },
+  "license": "MIT"
 }
