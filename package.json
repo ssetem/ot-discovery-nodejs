@@ -1,14 +1,35 @@
 {
-  "name": "discovery-client",
-  "version": "0.0.1",
+  "name": "ot-discovery",
+  "version": "0.1.0",
   "description": "Discovery Client",
   "main": "discovery.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/opentable/ot-discovery-nodejs.git"
   },
   "author": "Steven Schlansker",
   "dependencies": {
-    "require": "^0.5.0",
     "request": "2.33.0"
-  }
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-mocha-test": "^0.11.0",
+    "should": "^4.0.4"
+  },
+  "optionalDependencies": {
+    "ot-logger": "^0.0.14"
+  },
+  "bugs": {
+    "url": "https://github.com/opentable/ot-discovery-nodejs/issues"
+  },
+  "homepage": "https://github.com/opentable/ot-discovery-nodejs",
+  "directories": {
+    "test": "tests"
+  },
+  "license": "MIT"
 }
