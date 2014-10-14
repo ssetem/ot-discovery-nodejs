@@ -1,15 +1,15 @@
 var request = require("request");
-var logger = require("ot-logger");
 
 /*
  * DiscoveryClient constructor.
  * Creates a new uninitialized DiscoveryClient.
  */
-function DiscoveryClient(host) {
+function DiscoveryClient(host, options) {
   this.host = host;
   this.state = {announcements: {}};
-  this.errorHandlers = [this._backoff.bind(this)];
-  this.watchers = [this._update.bind(this), this._unbackoff.bind(this)];
+  this.logger = (options && options.logger) || require("ot-logger");
+  this.errorHandlers = [this._backoff.bind(this), this.logger.error.bind(this)];
+  this.watchers = [this._update.bind(this), this._unbackoff.bind(this), this.logger.log.bind(this)];
   this.announcements = [];
   this.backoff = 1;
 }
@@ -17,16 +17,16 @@ function DiscoveryClient(host) {
 /* Increase the watch backoff interval */
 DiscoveryClient.prototype._backoff = function () {
   this.backoff = Math.min(this.backoff * 2, 10240);
-}
+};
 
 /* Reset the watch backoff interval */
 DiscoveryClient.prototype._unbackoff = function() {
   this.backoff = 1;
-}
+};
 
 DiscoveryClient.prototype._randomServer = function() {
   return this.servers[Math.floor(Math.random()*this.servers.length)];
-}
+};
 
 /* Consume a WatchResult from the discovery server and update internal state */
 DiscoveryClient.prototype._update = function (update) {
@@ -37,7 +37,7 @@ DiscoveryClient.prototype._update = function (update) {
   disco.state.index = update.index;
   update.deletes.forEach(function (id) { delete disco.state.announcements[id]; });
   update.updates.forEach(function (announcement) { disco.state.announcements[announcement.announcementId] = announcement; });
-}
+};
 
 /* Connect to the Discovery servers given the endpoint of any one of them */
 DiscoveryClient.prototype.connect = function (onComplete) {
@@ -48,12 +48,16 @@ DiscoveryClient.prototype.connect = function (onComplete) {
   }, function (error, response, update) {
     if (error) {
       onComplete(error);
+      return;
     }
     if (response.statusCode != 200) {
-      onComplete(new Error("Unable to initiate discovery: " + update), undefined, undefined);
+      onComplete(new Error("Unable to initiate discovery: " + JSON.stringify(update)), undefined, undefined);
+      return;
     }
+
     if (!update.fullUpdate) {
-      onComplete(new Error("Expecting a full update: " + update), undefined, undefined);
+      onComplete(new Error("Expecting a full update: " + JSON.stringify(update)), undefined, undefined);
+      return;
     }
     disco._update(update);
 
@@ -75,12 +79,12 @@ DiscoveryClient.prototype.connect = function (onComplete) {
 /* Register a callback on every discovery update */
 DiscoveryClient.prototype.onUpdate = function (watcher) {
   this.watchers.push(watcher);
-}
+};
 
 /* Register a callback on every error */
 DiscoveryClient.prototype.onError = function (handler) {
   this.errorHandlers.push(handler);
-}
+};
 
 /* Internal scheduling method.  Schedule the next poll in the event loop */
 DiscoveryClient.prototype._schedule = function() {
@@ -90,7 +94,7 @@ DiscoveryClient.prototype._schedule = function() {
   } else {
     setTimeout(c, this.backoff).unref();
   }
-}
+};
 
 /* Long-poll the discovery server for changes */
 DiscoveryClient.prototype.poll = function () {
@@ -111,8 +115,8 @@ DiscoveryClient.prototype.poll = function () {
       return;
     }
     if (response.statusCode != 200) {
-      var error = new Error("Bad status code " + response.statusCode + " from watch: " + response);
-      disco.errorHandlers.forEach(function (h) { h(error); });
+      var err = new Error("Bad status code " + response.statusCode + " from watch: " + response);
+      disco.errorHandlers.forEach(function (h) { h(err); });
       disco._schedule();
       return;
     }
@@ -121,21 +125,40 @@ DiscoveryClient.prototype.poll = function () {
   });
 };
 
-/* Lookup a service by service type! */
-DiscoveryClient.prototype.find = function (serviceType) {
+/* Lookup a service by service type!
+ * Accepts one of:
+ *   serviceType as string
+ *   serviceType:feature as string
+ *   predicate function over announcement object
+ */
+DiscoveryClient.prototype.findAll = function (predicate) {
   var disco = this;
   var candidates = [];
+
+  if (typeof(predicate) != "function") {
+    var serviceType = predicate;
+    predicate = function(a) {
+      return a.serviceType == serviceType || a.serviceType + ":" + a.feature == serviceType;
+    };
+  }
+
   Object.keys(disco.state.announcements).forEach(function (id) {
     var a = disco.state.announcements[id];
-    if (a.serviceType == serviceType) {
+    if (predicate(a)) {
       candidates.push(a.serviceUri);
     }
   });
-  if (candidates.length == 0) {
+
+  return candidates;
+};
+
+DiscoveryClient.prototype.find = function (predicate) {
+  var candidates = this.findAll(predicate);
+  if (candidates.length === 0) {
     return undefined;
   }
   return candidates[Math.floor(Math.random()*candidates.length)];
-}
+};
 
 DiscoveryClient.prototype._announce = function() {
   var disco = this;
@@ -147,7 +170,7 @@ DiscoveryClient.prototype._announce = function() {
   this.announcements.forEach(function (a) {
     disco._singleAnnounce(a, cb);
   });
-}
+};
 
 DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
   var server = this._randomServer();
@@ -162,12 +185,12 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
       return;
     }
     if (response.statusCode != 201) {
-      cb(new Error("During announce, bad status code " + response.statusCode + ": " + body));
+      cb(new Error("During announce, bad status code " + response.statusCode + ": " + JSON.stringify(body)));
       return;
     }
     cb(undefined, body);
   });
-}
+};
 
 /* Announce ourselves to the registry */
 DiscoveryClient.prototype.announce = function (announcement, cb) {
@@ -177,28 +200,32 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    logger.log("Announced as " + a);
+    disco.logger.log("Announced as " + JSON.stringify(a));
     disco.announcements.push(a);
     cb(undefined, a);
   });
-}
+};
 
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
-DiscoveryClient.prototype.unannounce = function (announcement) {
-  var server = this._randomServer();
+DiscoveryClient.prototype.unannounce = function (announcement, callback) {
+  var disco = this;
+  var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
-  this.announcements.splice(this.announcements.indexOf(announcement), 1);
+  disco.announcements.splice(disco.announcements.indexOf(announcement), 1);
   request({
     url: url,
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      logger.error(error);
-      return;
+      disco.logger.error(error);
+    } else {
+      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
-    logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + body);
+    if (callback) {
+      callback();
+    }
   });
-}
+};
 
 module.exports = DiscoveryClient;
