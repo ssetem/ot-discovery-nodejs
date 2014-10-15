@@ -181,7 +181,6 @@ DiscoveryClient.prototype.poll = function () {
       return;
     }
     disco.watchers.forEach(function (w) { w(body); });
-    disco._schedule();
     disco._schedulePoll();
   });
 };
