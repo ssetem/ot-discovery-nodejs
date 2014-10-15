@@ -8,8 +8,8 @@ function DiscoveryClient(host, options) {
   this.host = host;
   this.state = {announcements: {}};
   this.logger = (options && options.logger) || require("ot-logger");
-  this.errorHandlers = [this._backoff.bind(this), this.logger.error.bind(this)];
-  this.watchers = [this._update.bind(this), this._unbackoff.bind(this), this.logger.log.bind(this)];
+  this.errorHandlers = [this.logger.log.bind(this.logger, 'error', 'Discovery error: ')];
+  this.watchers = [this._update.bind(this), this.logger.log.bind(this.logger, 'debug', 'Discovery update: ')];
   this.announcements = [];
   this.backoff = 1;
 }
@@ -59,6 +59,8 @@ DiscoveryClient.prototype.connect = function (onComplete) {
       onComplete(new Error("Expecting a full update: " + JSON.stringify(update)), undefined, undefined);
       return;
     }
+
+    disco.logger.log('debug', 'Discovery update: %s', JSON.stringify(update));
     disco._update(update);
 
     disco.servers = [];
@@ -70,9 +72,51 @@ DiscoveryClient.prototype.connect = function (onComplete) {
       }
     });
 
-    disco._schedule();
+    disco._schedulePoll();
     setInterval(disco._announce.bind(disco), 10000);
     onComplete(undefined, disco.host, disco.servers);
+  });
+};
+
+DiscoveryClient.prototype.reconnect = function (onComplete) {
+  var disco = this;
+  disco.logger.log('info', 'Attempting to reconnect to Discovery on %s', disco.host);
+  disco.reconnectScheduled = false;
+  disco.state.index = -1;
+  request({
+    url: "http://" + disco.host + "/watch?since=" + (this.state.index),
+    json: true
+  }, function (error, response, update) {
+    if (error) {
+      disco.logger.log('error', 'Could not reconnect to Discovery on: %s', disco.host);
+      disco._scheduleReconnect();
+      return;
+    }
+    if (response.statusCode != 200) {
+      disco.logger.log('error', 'Could not reconnect to Discovery on: %s', disco.host);
+      disco._scheduleReconnect();
+      return;
+    }
+
+    if (!update.fullUpdate) {
+      disco.logger.log('error', 'Expecting a full update: %s', JSON.stringify(update));
+      disco._scheduleReconnect();
+      return;
+    }
+
+    disco.logger.log('info', 'Reconnected toDiscovery on %s', disco.host);
+
+    disco._update(update);
+    disco.servers = [];
+    Object.keys(disco.state.announcements).forEach(function (id) {
+      var announcement = disco.state.announcements[id];
+      if (announcement.serviceType == "discovery") {
+        disco.servers.push(announcement.serviceUri);
+      }
+    });
+
+    disco._unbackoff();
+    disco._schedulePoll();
   });
 };
 
@@ -87,13 +131,27 @@ DiscoveryClient.prototype.onError = function (handler) {
 };
 
 /* Internal scheduling method.  Schedule the next poll in the event loop */
-DiscoveryClient.prototype._schedule = function() {
-  var c = this.poll.bind(this);
+DiscoveryClient.prototype._schedulePoll = function () {
+  if (!this.servers.length) {
+    this._scheduleReconnect();
+    return;
+  }
+  setImmediate(this.poll.bind(this));
+};
+
+DiscoveryClient.prototype._scheduleReconnect = function () {
+  if (this.reconnectScheduled) {
+    return;
+  }
+
+  this.reconnectScheduled = true;
+  var c = this.reconnect.bind(this);
   if (this.backoff <= 1) {
     setImmediate(c);
   } else {
     setTimeout(c, this.backoff).unref();
   }
+  this._backoff();
 };
 
 /* Long-poll the discovery server for changes */
@@ -107,21 +165,24 @@ DiscoveryClient.prototype.poll = function () {
   }, function (error, response, body) {
     if (error) {
       disco.errorHandlers.forEach(function (h) { h(error); });
-      disco._schedule();
+      disco.servers.splice(disco.servers.indexOf(server), 1);
+      disco._schedulePoll();
       return;
     }
     if (response.statusCode == 204) {
-      disco._schedule();
+      disco._schedulePoll();
       return;
     }
     if (response.statusCode != 200) {
       var err = new Error("Bad status code " + response.statusCode + " from watch: " + response);
       disco.errorHandlers.forEach(function (h) { h(err); });
-      disco._schedule();
+      disco.servers.splice(disco.servers.indexOf(server), 1);
+      disco._schedulePoll();
       return;
     }
     disco.watchers.forEach(function (w) { w(body); });
     disco._schedule();
+    disco._schedulePoll();
   });
 };
 
