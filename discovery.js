@@ -165,7 +165,7 @@ DiscoveryClient.prototype.poll = function () {
   }, function (error, response, body) {
     if (error) {
       disco.errorHandlers.forEach(function (h) { h(error); });
-      disco.servers.splice(disco.servers.indexOf(server), 1);
+      disco.dropServer(server);
       disco._schedulePoll();
       return;
     }
@@ -176,7 +176,7 @@ DiscoveryClient.prototype.poll = function () {
     if (response.statusCode != 200) {
       var err = new Error("Bad status code " + response.statusCode + " from watch: " + response);
       disco.errorHandlers.forEach(function (h) { h(err); });
-      disco.servers.splice(disco.servers.indexOf(server), 1);
+      disco.dropServer(server);
       disco._schedulePoll();
       return;
     }
@@ -184,6 +184,11 @@ DiscoveryClient.prototype.poll = function () {
     disco._schedule();
     disco._schedulePoll();
   });
+};
+
+DiscoveryClient.prototype.dropServer = function (server) {
+  this.logger.log('info', 'Dropping discovery server %s', server);
+  this.servers.splice(this.servers.indexOf(server), 1);
 };
 
 /* Lookup a service by service type!
