@@ -244,6 +244,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
     cb(new Error('Cannot announce. No discovery servers available'));
     return;
   }
+  this.logger.log('info', 'Announcing %s on %s', JSON.stringify(announcement), server);
   request({
     url: server + "/announcement",
     method: "POST",
