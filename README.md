@@ -24,8 +24,7 @@ options:
 ```
 {
   logger: { // a logger object which implements the following signature
-    log: function(log){},
-    error: function(error){}
+    log: function(severity, log){} // severity will be one of info, debug, error
   }
 }
 ```

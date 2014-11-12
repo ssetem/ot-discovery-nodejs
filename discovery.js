@@ -60,7 +60,7 @@ DiscoveryClient.prototype.connect = function (onComplete) {
       return;
     }
 
-    disco.logger.log('debug', 'Discovery update: %s', JSON.stringify(update));
+    disco.logger.log('debug', 'Discovery update: ' + JSON.stringify(update));
     disco._update(update);
 
     disco.servers = [];
@@ -80,7 +80,7 @@ DiscoveryClient.prototype.connect = function (onComplete) {
 
 DiscoveryClient.prototype.reconnect = function (onComplete) {
   var disco = this;
-  disco.logger.log('info', 'Attempting to reconnect to Discovery on %s', disco.host);
+  disco.logger.log('info', 'Attempting to reconnect to Discovery on: ' + disco.host);
   disco.reconnectScheduled = false;
   disco.state.index = -1;
   request({
@@ -88,23 +88,23 @@ DiscoveryClient.prototype.reconnect = function (onComplete) {
     json: true
   }, function (error, response, update) {
     if (error) {
-      disco.logger.log('error', 'Could not reconnect to Discovery on: %s', disco.host);
+      disco.logger.log('error', 'Could not reconnect to Discovery on: ' + disco.host);
       disco._scheduleReconnect();
       return;
     }
     if (response.statusCode != 200) {
-      disco.logger.log('error', 'Could not reconnect to Discovery on: %s', disco.host);
+      disco.logger.log('error', 'Could not reconnect to Discovery on: ' + disco.host);
       disco._scheduleReconnect();
       return;
     }
 
     if (!update.fullUpdate) {
-      disco.logger.log('error', 'Expecting a full update: %s', JSON.stringify(update));
+      disco.logger.log('error', 'Expecting a full update: ' + JSON.stringify(update));
       disco._scheduleReconnect();
       return;
     }
 
-    disco.logger.log('info', 'Reconnected toDiscovery on %s', disco.host);
+    disco.logger.log('info', 'Reconnected toDiscovery on ' + disco.host);
 
     disco._update(update);
     disco.servers = [];
@@ -186,7 +186,7 @@ DiscoveryClient.prototype.poll = function () {
 };
 
 DiscoveryClient.prototype.dropServer = function (server) {
-  this.logger.log('info', 'Dropping discovery server %s', server);
+  this.logger.log('info', 'Dropping discovery server ' + server);
   this.servers.splice(this.servers.indexOf(server), 1);
 };
 
@@ -244,7 +244,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
     cb(new Error('Cannot announce. No discovery servers available'));
     return;
   }
-  this.logger.log('debug', 'Announcing %s on %s', JSON.stringify(announcement), server);
+  this.logger.log('debug', 'Announcing ' + JSON.stringify(announcement));
   request({
     url: server + "/announcement",
     method: "POST",
@@ -271,7 +271,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    disco.logger.log("Announced as " + JSON.stringify(a));
+    disco.logger.log("info", "Announced as " + JSON.stringify(a));
     disco.announcements.push(a);
     cb(undefined, a);
   });
@@ -289,9 +289,9 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      disco.logger.error(error);
+      disco.logger.log('error', error);
     } else {
-      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
+      disco.logger.log("error", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
     if (callback) {
       callback();
