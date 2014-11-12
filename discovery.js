@@ -271,7 +271,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
       cb(error);
       return;
     }
-    disco.logger.log("Announced as " + JSON.stringify(a));
+    disco.logger.log("info", "Announced as " + JSON.stringify(a));
     disco.announcements.push(a);
     cb(undefined, a);
   });
@@ -289,9 +289,9 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     method: "DELETE"
   }, function (error, response, body) {
     if (error) {
-      disco.logger.error(error);
+      disco.logger.log('error', error);
     } else {
-      disco.logger.log("Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
+      disco.logger.log("error", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
     if (callback) {
       callback();
