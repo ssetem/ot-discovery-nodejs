@@ -1,7 +1,7 @@
-Discovery Client
----
+# OT Discovery Client
+[![Build Status](https://travis-ci.org/opentable/ot-discovery-nodejs.png?branch=master)](https://travis-ci.org/opentable/ot-discovery-nodejs) [![NPM version](https://badge.fury.io/js/ot-discovery.png)](http://badge.fury.io/js/ot-discovery) ![Dependencies](https://david-dm.org/opentable/ot-discovery-nodejs.png)
 
-Client for OT service discovery.
+Client for OT flavoured service discovery. (Note we are in the process of open-sourcing the entire Opentable discovery stack)
 
 installation:
 
