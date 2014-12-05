@@ -6,7 +6,7 @@ Client for OT flavoured service discovery. (Note we are in the process of open-s
 installation:
 
 ```
-npm install ot-discovery-nodejs
+npm install ot-discovery
 ```
 
 usage:
@@ -14,7 +14,7 @@ usage:
 for a full example, see demo.js
 
 ```
-var discovery = require("ot-discovery-nodejs");
+var discovery = require("ot-discovery");
 
 var disco = new discovery("discovery-server.mydomain.com", { /* options */});
 ```
