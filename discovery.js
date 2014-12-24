@@ -1,4 +1,5 @@
 var request = require("request");
+var uuid = require('node-uuid');
 
 /*
  * DiscoveryClient constructor.
@@ -238,6 +239,7 @@ DiscoveryClient.prototype._announce = function() {
 };
 
 DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
+  announcement.announcementId = announcement.announcementId || uuid.v4();
   var server = this._randomServer();
   if (!server) {
     this.logger.log('info', 'Cannot announce. No discovery servers available');
