@@ -1,6 +1,6 @@
 {
   "name": "ot-discovery",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Discovery Client",
   "main": "discovery.js",
   "scripts": {
@@ -13,7 +13,7 @@
   "author": "Steven Schlansker",
   "dependencies": {
     "node-uuid": "^1.4.2",
-    "request": "2.33.0"
+    "request": "^2.53.0"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
