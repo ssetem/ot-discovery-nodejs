@@ -26,6 +26,9 @@ DiscoveryClient.prototype._unbackoff = function() {
 };
 
 DiscoveryClient.prototype._randomServer = function() {
+  if (!this.servers || !this.servers.length) {
+    return this.servers = [Math.floor(Math.random()*10)]; //TO DO: return some default server
+  }
   return this.servers[Math.floor(Math.random()*this.servers.length)];
 };
 
