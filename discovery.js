@@ -27,7 +27,8 @@ DiscoveryClient.prototype._unbackoff = function() {
 
 DiscoveryClient.prototype._randomServer = function() {
   if (!this.servers || !this.servers.length) {
-    return new Error("There no servers defined.");
+    console.error('Servers is undefined');
+    this.servers = [null];
   }
   return this.servers[Math.floor(Math.random()*this.servers.length)];
 };
