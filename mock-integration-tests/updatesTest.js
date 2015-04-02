@@ -138,7 +138,7 @@ describe('Discovery Client IntegrationTests', function(){
 		done();
 	 });
 
-    it('should return -1 when the value is not present', function (done){
+    it('should call watch, watch?since= & correctly populate announcements', function (done){
     	 this.timeout(5000);
 	     var disco = new discovery(DISCOVERY_HOST, {
 		  logger: {
