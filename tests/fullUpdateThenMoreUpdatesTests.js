@@ -2,8 +2,12 @@ var assert = require("assert");
 var nock = require('nock');
 var discovery = require('./../discovery.js');
 var constants = require('./testConstants.js');
+var utils = require('./testUtils.js');
 var fullUpdate;
 var noUpdate;
+var TOTAL_TEST_TIME = 3000;
+var UPDATE_TIME_DELAY_MS = 2000;
+var ACCEPTABLE_UPDATE_LAG = 50;
 
 describe('# full-update followed by some updates tests', function(){
 	beforeEach(function(done){
@@ -36,6 +40,7 @@ describe('# full-update followed by some updates tests', function(){
 
 		smallUpdate = nock(constants.DISCOVERY_SERVER_URLS[0])
 						.get('/watch?since=' + 101)
+						.delayConnection(UPDATE_TIME_DELAY_MS)
 						.reply(200, {
 							"fullUpdate":false,
 							"index":101,
@@ -71,6 +76,7 @@ describe('# full-update followed by some updates tests', function(){
 	});
 
     it('should call watch, watch?since= and correctly populate announcements', function (done){
+	     this.timeout(constants.TIMEOUT_MS);
 	     var disco = new discovery(constants.DISCOVERY_HOST, {
 		  logger: {
 		    log: function(level, log, update){ console.log(log); },
@@ -83,19 +89,32 @@ describe('# full-update followed by some updates tests', function(){
 		});
 
 	    var onUpdateReceived = false;
-
+	    var start = new Date();
 		disco.onUpdate(function(arg1, arg2, arg3) {
 			onUpdateReceived = true;
+			assertUpdateWasReceived();
+			assertUpdateWasReceivedOnTime();
 			smallUpdate.done();
 			assertStates();
 		});
 
 		setTimeout(function() {
-			assert.equal(true, onUpdateReceived);
+			assertUpdateWasReceived();
 			noUpdate.done();
 			assertStates();
 			done(); 
-		}, 1500);
+		}, TOTAL_TEST_TIME);
+
+		function assertUpdateWasReceived() {
+			assert.equal(true, onUpdateReceived);
+		}
+
+		function assertUpdateWasReceivedOnTime() {
+			var end = new Date();
+			var timeDiff = utils.timeDiffMS(end, start);
+			var timeDiffAcceptable = (timeDiff < UPDATE_TIME_DELAY_MS + ACCEPTABLE_UPDATE_LAG);
+			assert.equal(true, timeDiffAcceptable);
+		}
 
 		function assertStates() {
 			var announcements = disco.state.announcements;
