@@ -5,10 +5,10 @@ var constants = require('./testConstants.js');
 var fullUpdate;
 var noUpdate;
 
-describe('#full update followed by no updates', function(){
+describe('# full update followed by no updates tests', function(){
 	beforeEach(function(done){
+		nock.cleanAll();
 		nock.disableNetConnect();
-		this.timeout(constants.TIMEOUT_MS);
 
 	    fullUpdate = nock(constants.DISCOVERY_URL)
 						.get('/watch')
@@ -36,17 +36,13 @@ describe('#full update followed by no updates', function(){
 
 		noUpdate = nock(constants.DISCOVERY_SERVER_URLS[0])
 						.get('/watch?since=' + 101)
-						.reply(200, {
-							"fullUpdate":false,
-							"index":100,
-							"deletes":[],
-							"updates":[]
-							});
-
+						.delayConnection(10000)
+						.reply(204);
 		done();
 	 });
 
 	afterEach(function(done) {
+		nock.cleanAll();
 		nock.enableNetConnect();
 		done();
 	});
@@ -54,8 +50,8 @@ describe('#full update followed by no updates', function(){
     it('should call watch, watch?since= and correctly populate announcements', function (done){
 	     var disco = new discovery(constants.DISCOVERY_HOST, {
 		  logger: {
-		    log: function(){ },
-		    error: function(){ },
+		    log: function(level, log, update){ console.log(log); },
+		    error: function(){ console.log(log); },
 		  }
 		});
 
