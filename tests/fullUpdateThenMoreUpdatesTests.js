@@ -78,13 +78,26 @@ describe('# full-update followed by some updates tests', function(){
 		  }
 		});
 
-		disco.connect(function(error, host, servers) {
+	    disco.connect(function(error, host, servers) {
 			fullUpdate.done();
 		});
 
-		setTimeout(function() { 
-			smallUpdate.done(); 
+	    var onUpdateReceived = false;
+
+		disco.onUpdate(function(arg1, arg2, arg3) {
+			onUpdateReceived = true;
+			smallUpdate.done();
+			assertStates();
+		});
+
+		setTimeout(function() {
+			assert.equal(true, onUpdateReceived);
 			noUpdate.done();
+			assertStates();
+			done(); 
+		}, 1500);
+
+		function assertStates() {
 			var announcements = disco.state.announcements;
 			assert.equal(3, Object.keys(disco.state.announcements).length);
 			assert.equal(true, announcements.hasOwnProperty('discovery'));
@@ -93,7 +106,6 @@ describe('# full-update followed by some updates tests', function(){
 			assert.equal('discovery', announcements['discovery'].serviceType);
 			assert.equal('my-service-new1', announcements['new1'].serviceType);
 			assert.equal('my-service-new2', announcements['new2'].serviceType);
-			done(); 
-		}, 1000);
-    })
+		}
+    });
  });
