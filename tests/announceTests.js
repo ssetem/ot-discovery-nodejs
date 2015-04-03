@@ -10,8 +10,6 @@ describe('# announce tests', function(){
 	beforeEach(function(done){
 		nock.cleanAll();
 		nock.disableNetConnect();
-		this.timeout(constants.TIMEOUT_MS);
-
 		announcement = {
 			"announcementId":"my-new-service-id",
 			"staticAnnouncement":false,
@@ -63,8 +61,7 @@ describe('# announce tests', function(){
 		done();
 	});
 
-    it('should announce calling /announce endpoint', function (done){
-    	 this.timeout(constants.TIMEOUT_MS);
+    it('should announce calling /announce endpoint', function (done) {
 	     var disco = new discovery(constants.DISCOVERY_HOST, {
 		  logger: {
 		    log: function(level, log, update){ console.log(log); },
