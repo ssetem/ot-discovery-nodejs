@@ -5,16 +5,26 @@ var constants = require('./testConstants.js');
 var fullUpdate;
 var noUpdate;
 var announcement;
+var announcementFailure;
 
 describe('# announce tests', function(){
 	beforeEach(function(done){
 		nock.cleanAll();
 		nock.disableNetConnect();
+
 		announcement = {
 			"announcementId":"my-new-service-id",
 			"staticAnnouncement":false,
 			"announceTime":"2015-04-02T23:14:13.773Z",
 			"serviceType":"my-new-service",
+			"serviceUri":"http://my-new-service:8080"
+		}
+
+		announcementFailure = {
+			"announcementId":"my-new-service-failed-id",
+			"staticAnnouncement":false,
+			"announceTime":"2015-04-02T23:14:13.773Z",
+			"serviceType":"my-new-service-failed",
 			"serviceUri":"http://my-new-service:8080"
 		}
 
@@ -49,8 +59,11 @@ describe('# announce tests', function(){
 
 		announce = nock(constants.DISCOVERY_SERVER_URLS[0])
 						.post('/announcement', announcement)
-						.delayConnection(1000)
 			            .reply(201, announcement);
+
+		announcementFailure = nock(constants.DISCOVERY_SERVER_URLS[0])
+						.post('/announcement', announcementFailure)
+			            .reply(500, announcementFailure);
 
 		done();
 	 });
@@ -78,6 +91,29 @@ describe('# announce tests', function(){
 		setTimeout(function() { 
 			noUpdate.done();
 			announce.done();
+			done(); 
+		}, 1000);
+    });
+
+    it('should take server out of rotation on announcement failure', function (done) {
+	     var disco = new discovery(constants.DISCOVERY_HOST, {
+		  logger: {
+		    log: function(level, log, update){ console.log(log); },
+		    error: function(){ },
+		  }
+		});
+
+		disco.connect(function(error, host, servers) {
+			fullUpdate.done();
+			assert.equal(1, disco.servers.length);
+			assert.equal(constants.DISCOVERY_SERVER_URLS[0], disco.servers[0]);
+			disco.announce(announcementFailure, function (error, lease) {
+			});
+		});
+
+		setTimeout(function() { 
+			noUpdate.done();
+			assert.equal(0, disco.servers.length);
 			done(); 
 		}, 1000);
     })
