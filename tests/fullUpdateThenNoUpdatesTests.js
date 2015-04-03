@@ -59,7 +59,15 @@ describe('# full update followed by no updates tests', function(){
 			fullUpdate.done();
 		});
 
+		var onUpdateReceived = false;
+		// there are no updates after fullUpdate in this test, 
+		// so this method should not fire.
+		disco.onUpdate(function(arg1, arg2, arg3) {
+			onUpdateReceived = true;
+		});
+
 		setTimeout(function() { 
+			assert.equal(false, onUpdateReceived);
 			noUpdate.done();
 			var announcements = disco.state.announcements;
 			assert.equal(true, announcements.hasOwnProperty('discoveryId'));
@@ -68,6 +76,6 @@ describe('# full update followed by no updates tests', function(){
 			assert.equal('myservice', announcements['myserviceId'].serviceType);
 			assert.equal(2, Object.keys(disco.state.announcements).length);
 			done(); 
-		}, 1000);
+		}, 1500);
     })
 });
