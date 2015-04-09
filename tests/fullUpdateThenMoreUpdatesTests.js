@@ -102,7 +102,7 @@ describe('# full-update followed by some updates tests', function(){
 			assertUpdateWasReceived();
 			noUpdate.done();
 			assertStates();
-			done(); 
+			done();
 		}, TOTAL_TEST_TIME);
 
 		function assertUpdateWasReceived() {

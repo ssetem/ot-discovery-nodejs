@@ -88,10 +88,10 @@ describe('# announce tests', function(){
 			});
 		});
 
-		setTimeout(function() { 
+		setTimeout(function() {
 			noUpdate.done();
 			announce.done();
-			done(); 
+			done();
 		}, 1000);
     });
 
@@ -111,10 +111,10 @@ describe('# announce tests', function(){
 			});
 		});
 
-		setTimeout(function() { 
+		setTimeout(function() {
 			noUpdate.done();
 			assert.equal(0, disco.servers.length);
-			done(); 
+			done();
 		}, 1000);
     })
 });
