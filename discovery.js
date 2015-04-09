@@ -239,11 +239,13 @@ DiscoveryClient.prototype._announce = function() {
 };
 
 DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
+  var disco = this;
   announcement.announcementId = announcement.announcementId || uuid.v4();
   var server = this._randomServer();
   if (!server) {
     this.logger.log('info', 'Cannot announce. No discovery servers available');
     cb(new Error('Cannot announce. No discovery servers available'));
+    disco._scheduleReconnect(); 
     return;
   }
   this.logger.log('debug', 'Announcing ' + JSON.stringify(announcement));
@@ -254,6 +256,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
     body: announcement
   }, function (error, response, body) {
     if (error) {
+      disco.dropServer(server);
       cb(error);
       return;
     }
