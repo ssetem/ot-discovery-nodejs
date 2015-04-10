@@ -296,7 +296,7 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     if (error) {
       disco.logger.log('error', error);
     } else {
-      disco.logger.log("error", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
+      disco.logger.log("info", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
     if (callback) {
       callback();
