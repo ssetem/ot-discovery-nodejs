@@ -38,7 +38,7 @@ describe('discovery', function(){
         annoucementId: '3',
         serviceUri: 'http://myservice-2.domain.com'
       },function(){
-        
+
         done();
     });
   });
