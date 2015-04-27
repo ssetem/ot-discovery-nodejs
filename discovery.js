@@ -45,23 +45,23 @@ DiscoveryClient.prototype._update = function (update) {
 };
 
 /* Connect to the Discovery servers given the endpoint of any one of them */
-DiscoveryClient.prototype.connect = function (onComplete) {
+DiscoveryClient.prototype.connect = function (cb) {
   var disco = this;
   request({
     url: "http://" + this.host + "/watch",
     json: true
   }, function (error, response, update) {
     if (error) {
-      onComplete(error);
+      cb(error);
       return;
     }
     if (response.statusCode != 200) {
-      onComplete(new Error("Unable to initiate discovery: " + JSON.stringify(update)), undefined, undefined);
+      cb("Unable to initiate discovery: " + JSON.stringify(update));
       return;
     }
 
     if (!update.fullUpdate) {
-      onComplete(new Error("Expecting a full update: " + JSON.stringify(update)), undefined, undefined);
+      cb("Expecting a full update: " + JSON.stringify(update));
       return;
     }
 
@@ -79,11 +79,11 @@ DiscoveryClient.prototype.connect = function (onComplete) {
 
     disco._schedulePoll();
     setInterval(disco._announce.bind(disco), 10000);
-    onComplete(undefined, disco.host, disco.servers);
+    cb(undefined, disco.host, disco.servers);
   });
 };
 
-DiscoveryClient.prototype.reconnect = function (onComplete) {
+DiscoveryClient.prototype.reconnect = function () {
   var disco = this;
   disco.logger.log('info', 'Attempting to reconnect to Discovery on: ' + disco.host);
   disco.reconnectScheduled = false;
@@ -285,7 +285,7 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
 
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
-DiscoveryClient.prototype.unannounce = function (announcement, callback) {
+DiscoveryClient.prototype.unannounce = function (announcement, cb) {
   var disco = this;
   var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
@@ -299,10 +299,18 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     } else {
       disco.logger.log("error", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
-    if (callback) {
-      callback();
+    if (cb) {
+      cb();
     }
   });
+};
+/*
+  Start Method 
+  1. connect 
+  2. announce
+*/
+DiscoveryClient.prototype.start = function() {
+
 };
 
 module.exports = DiscoveryClient;
