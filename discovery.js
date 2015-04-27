@@ -52,15 +52,18 @@ DiscoveryClient.prototype.connect = function (cb) {
     json: true
   }, function (error, response, update) {
     if (error) {
+      console.error('Discovery Service::Connect:: error: %s', error);
       cb(error);
       return;
     }
-    if (response.statusCode != 200) {
+    if (response.statusCode !== 200) {
+      console.error('Discovery Service::Connect:: Response Code is not 200: %s', JSON.stringify(update));
       cb("Unable to initiate discovery: " + JSON.stringify(update));
       return;
     }
 
     if (!update.fullUpdate) {
+      console.error('Discovery Service::Connect:: fullUpdate is undefined %s', JSON.stringify(update));
       cb("Expecting a full update: " + JSON.stringify(update));
       return;
     }
@@ -306,14 +309,6 @@ DiscoveryClient.prototype.unannounce = function (announcement, cb) {
       cb();
     }
   });
-};
-/*
-  Start Method 
-  1. connect 
-  2. announce
-*/
-DiscoveryClient.prototype.start = function() {
-
 };
 
 module.exports = DiscoveryClient;
