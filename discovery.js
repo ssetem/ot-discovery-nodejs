@@ -27,8 +27,7 @@ DiscoveryClient.prototype._unbackoff = function() {
 
 DiscoveryClient.prototype._randomServer = function() {
   if (!this.servers || !this.servers.length) {
-    console.error('Servers is undefined');
-    this.servers = [null];
+    disco.logger.log('error', 'Servers is undefined');
   }
   return this.servers[Math.floor(Math.random()*this.servers.length)];
 };
@@ -57,7 +56,7 @@ DiscoveryClient.prototype.connect = function (cb) {
       return;
     }
     if (response.statusCode !== 200) {
-      console.error('Discovery Service::Connect:: Response Code is not 200: %s', JSON.stringify(update));
+      disco.logger.log('error', 'Discovery Service::Connect:: Response Code is not 200: ' + JSON.stringify(update));
       cb("Unable to initiate discovery: " + JSON.stringify(update));
       return;
     }
