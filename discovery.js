@@ -25,7 +25,15 @@ DiscoveryClient.prototype._unbackoff = function() {
   this.backoff = 1;
 };
 
-DiscoveryClient.prototype._randomServer = function() {
+DiscoveryClient.prototype._randomServer = function(cb) {
+  if (!this.servers || !this.servers.length) {
+    disco.logger.log('error', 'Servers is undefined');
+    this.logger.log('info', 'Cannot announce. No discovery servers available');
+    if (typeof cb === 'funciton') {
+      return cb(new Error('Cannot announce. No discovery servers available'));
+    }
+    return new Error('Cannot announce. No discovery servers available');
+  }
   return this.servers[Math.floor(Math.random()*this.servers.length)];
 };
 
@@ -41,24 +49,24 @@ DiscoveryClient.prototype._update = function (update) {
 };
 
 /* Connect to the Discovery servers given the endpoint of any one of them */
-DiscoveryClient.prototype.connect = function (onComplete) {
+DiscoveryClient.prototype.connect = function (cb) {
   var disco = this;
   request({
     url: "http://" + this.host + "/watch",
     json: true
   }, function (error, response, update) {
     if (error) {
-      onComplete(error);
-      return;
+      disco.logger.log('error','Discovery Service::Connect:: error: '+ JSON.stringify(error));
+      return cb(error);
     }
-    if (response.statusCode != 200) {
-      onComplete(new Error("Unable to initiate discovery: " + JSON.stringify(update)), undefined, undefined);
-      return;
+    if (response.statusCode !== 200) {
+      disco.logger.log('error', 'Discovery Service::Connect:: Response Code is not 200: ' + JSON.stringify(update));
+      return cb("Unable to initiate discovery: " + JSON.stringify(update));
     }
 
     if (!update.fullUpdate) {
-      onComplete(new Error("Expecting a full update: " + JSON.stringify(update)), undefined, undefined);
-      return;
+      console.error('Discovery Service::Connect:: fullUpdate is undefined %s', JSON.stringify(update));
+      return cb("Expecting a full update: " + JSON.stringify(update));
     }
 
     disco.logger.log('debug', 'Discovery update: ' + JSON.stringify(update));
@@ -75,11 +83,11 @@ DiscoveryClient.prototype.connect = function (onComplete) {
 
     disco._schedulePoll();
     setInterval(disco._announce.bind(disco), 10000);
-    onComplete(undefined, disco.host, disco.servers);
+    cb(undefined, disco.host, disco.servers);
   });
 };
 
-DiscoveryClient.prototype.reconnect = function (onComplete) {
+DiscoveryClient.prototype.reconnect = function () {
   var disco = this;
   disco.logger.log('info', 'Attempting to reconnect to Discovery on: ' + disco.host);
   disco.reconnectScheduled = false;
@@ -241,13 +249,7 @@ DiscoveryClient.prototype._announce = function() {
 DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
   var disco = this;
   announcement.announcementId = announcement.announcementId || uuid.v4();
-  var server = this._randomServer();
-  if (!server) {
-    this.logger.log('info', 'Cannot announce. No discovery servers available');
-    cb(new Error('Cannot announce. No discovery servers available'));
-    disco._scheduleReconnect(); 
-    return;
-  }
+  var server = this._randomServer(cb);
   this.logger.log('debug', 'Announcing ' + JSON.stringify(announcement));
   request({
     url: server + "/announcement",
@@ -257,12 +259,10 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
   }, function (error, response, body) {
     if (error) {
       disco.dropServer(server);
-      cb(error);
-      return;
+      return cb(error);
     }
     if (response.statusCode != 201) {
-      cb(new Error("During announce, bad status code " + response.statusCode + ": " + JSON.stringify(body)));
-      return;
+      return cb(new Error("During announce, bad status code " + response.statusCode + ": " + JSON.stringify(body)));
     }
     cb(undefined, body);
   });
@@ -273,18 +273,17 @@ DiscoveryClient.prototype.announce = function (announcement, cb) {
   var disco = this;
   this._singleAnnounce(announcement, function(error, a) {
     if (error) {
-      cb(error);
-      return;
+      return cb(error);
     }
     disco.logger.log("info", "Announced as " + JSON.stringify(a));
     disco.announcements.push(a);
-    cb(undefined, a);
+    return cb(undefined, a);
   });
 };
 
 /* Remove a previous announcement.  The passed object *must* be the
  * lease as returned by the 'announce' callback. */
-DiscoveryClient.prototype.unannounce = function (announcement, callback) {
+DiscoveryClient.prototype.unannounce = function (announcement, cb) {
   var disco = this;
   var server = disco._randomServer();
   var url = server + "/announcement/" + announcement.announcementId;
@@ -298,8 +297,8 @@ DiscoveryClient.prototype.unannounce = function (announcement, callback) {
     } else {
       disco.logger.log("info", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(body));
     }
-    if (callback) {
-      callback();
+    if (cb) {
+      cb();
     }
   });
 };
