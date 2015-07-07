@@ -9,10 +9,9 @@ class DiscoveryAnnouncer
 
 
   constructor:(@discoveryClient)->
-
     @announcements = []
 
-  pingAllAnnouncements:()->
+  pingAllAnnouncements:()=>
     Promise.all(_.map(
       @announcements, @attemptAnnounce
     )).catch (error)=>

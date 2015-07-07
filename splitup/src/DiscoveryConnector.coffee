@@ -21,7 +21,8 @@ class DiscoveryConnector
 
   handle:(response)->
     if response.statusCode != 200
-      return bluebird.reject(new Errors.DiscoveryError(response.body))
+      return bluebird.reject(
+        new Errors.DiscoveryError(response.body))
 
     update = response.body
 

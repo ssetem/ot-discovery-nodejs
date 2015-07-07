@@ -53,6 +53,12 @@ class DiscoveryClient
   notifyWatchers:(body)->
     Utils.invokeAll(@watchers, body)
 
+  onUpdate:(fn)->
+    @watchers.push(fn)
+
+  onError:(fn)->
+    @errorHandlers.push(fn)
+
   log:(args...)->
     @logger.log.apply(@logger, args)
 
