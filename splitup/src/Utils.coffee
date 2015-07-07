@@ -13,7 +13,7 @@ module.exports = new class Utils
       else
         Promise.delay(backoff).then ->
           newBackoff = Math.min(backoff * 2, 10240)
-          self.retryWithBackoff fn, newBackoff, times-1
+          self.promiseRetry fn, newBackoff, times-1
 
   invokeAll:(fns, args...)->
     for fn in fns

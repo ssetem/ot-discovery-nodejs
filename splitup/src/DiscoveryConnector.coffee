@@ -1,7 +1,7 @@
-bluebird = require "bluebird"
+Promise = require "bluebird"
 Errors = require "./Errors"
-RequestPromise = require "RequestPromise"
-Utils = require "Utils"
+RequestPromise = require "./RequestPromise"
+Utils = require "./Utils"
 
 class DiscoveryConnector
 
@@ -15,20 +15,28 @@ class DiscoveryConnector
   connect:()->
     Utils.promiseRetry @attemptConnect
 
+
   attemptConnect:()=>
     RequestPromise(url:@connectUrl(), json:true)
       .then(@handle)
+      .catch(@handleError)
+
+  handleError:(error)=>
+    @discoveryClient.notifyErrors(error)
+    Promise.reject(error)
 
   handle:(response)->
     if response.statusCode != 200
-      return bluebird.reject(
-        new Errors.DiscoveryError(response.body))
+      return Promise.reject(
+        new Errors.DiscoveryConnectError(response.body))
 
     update = response.body
 
     unless update?.fullUpdate
-      return bluebird.reject(
+      return Promise.reject(
         new Errors.DiscoveryFullUpdateError(update))
 
     #TODO: log debug statement
     return update
+
+module.exports = DiscoveryConnector

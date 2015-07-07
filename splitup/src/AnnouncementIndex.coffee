@@ -18,6 +18,7 @@ class AnnouncementIndex
     @removeAnnouncements(update.deletes)
     @addAnnouncements(update.updates)
     @computeDiscoveryServers()
+    @discoveryClient.notifyWatchers(update)
 
   removeAnnouncements:(ids=[])->
     @announcements = _.omit(@announcements, ids)

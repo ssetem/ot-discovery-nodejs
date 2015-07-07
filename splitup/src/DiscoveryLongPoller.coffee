@@ -1,18 +1,24 @@
-bluebird = require "bluebird"
+Promise = require "bluebird"
 Errors = require "./Errors"
-RequestPromise = require "RequestPromise"
-Utils = require "Utils"
+RequestPromise = require "./RequestPromise"
+Utils = require "./Utils"
 
 class DiscoveryLongPoller
 
 
   constructor:(@discoveryClient)->
 
+  startPolling:()=>
+    return if @shouldBePolling
+    @shouldBePolling = true
+    @schedulePoll()
+
   schedulePoll:()=>
+    return unless @shouldBePolling
     if @discoveryClient.serverList.isEmpty()
       @discoveryClient.reconnect()
     else
-      process.nextTick @poll
+      @poll()
 
   poll:()=>
     @server = @discoveryClient.serverList.getRandom()
@@ -38,5 +44,7 @@ class DiscoveryLongPoller
       @discoveryClient.serverList.dropServer(@server)
       @schedulePoll()
     else
-      @discoveryClient.notifyWatchers(response.body)
+      @discoveryClient.announcementIndex.processUpdate(response.body)
       @schedulePoll()
+
+module.exports = DiscoveryLongPoller

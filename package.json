@@ -13,6 +13,7 @@
   "author": "Steven Schlansker",
   "dependencies": {
     "bluebird": "^2.9.32",
+    "coffee-script": "^1.9.3",
     "lodash": "^3.10.0",
     "node-uuid": "^1.4.2",
     "request": "^2.53.0"

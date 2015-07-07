@@ -1,9 +1,9 @@
-DiscoveryConnector = require "DiscoveryConnector"
-AnnouncementIndex = require "AnnouncementIndex"
-DiscoveryAnnouncer = require "DiscoveryAnnouncer"
-DisoveryLongPoller = require "DisoveryLongPoller"
-ServerList = require "ServerList"
-Utils = require "Utils"
+DiscoveryConnector = require "./DiscoveryConnector"
+AnnouncementIndex = require "./AnnouncementIndex"
+DiscoveryAnnouncer = require "./DiscoveryAnnouncer"
+DiscoveryLongPoller = require "./DiscoveryLongPoller"
+ServerList = require "./ServerList"
+Utils = require "./Utils"
 
 class DiscoveryClient
 
@@ -15,11 +15,16 @@ class DiscoveryClient
     @discoveryConnector = new DiscoveryConnector(@)
     @discoveryLongPoller = new DiscoveryLongPoller(@)
     @discoveryAnnouncer = new DiscoveryAnnouncer(@)
-    @errorHandlers = []
-    @watchers = []
+    @errorHandlers = [
+      @logger.log.bind(@logger, "error", "Discovery error: ")
+    ]
+    @watchers = [
+      @logger.log.bind(@logger, "debug", "Discovery update: ")
+    ]
 
   connect:(callback)->
-    discoveryConnector.connect()
+    @discoveryConnector.connect()
+      .then(@saveUpdates)
       .then(@longPollForUpdates)
       .then(@startAnnouncementHeartbeat)
       .nodeify(callback)
@@ -36,8 +41,12 @@ class DiscoveryClient
   reconnect:()->
     @connect()
 
+  saveUpdates:(update)=>
+    console.log update
+    @announcementIndex.processUpdate(update)
+
   longPollForUpdates:()=>
-    @discoveryLongPoller.schedulePoll()
+    @discoveryLongPoller.startPolling()
 
   announce:(announcement, callback)->
     @discoveryAnnouncer.announce(
