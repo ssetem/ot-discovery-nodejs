@@ -4,7 +4,7 @@ _ = require "lodash"
 
 class ServerList
 
-  constructor:()->
+  constructor:(@discoveryClient)->
     @servers = []
 
   getRandom:()->

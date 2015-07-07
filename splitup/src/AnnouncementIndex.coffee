@@ -4,10 +4,10 @@ _ = require "lodash"
 class AnnouncementIndex
 
 
-  constructor:()->
+  constructor:(@discoveryClient)->
     @announcements = {}
     @discoveryServers = []
-    @index = 0
+    @index = -1
 
 
   processUpdate:(update)->
@@ -39,9 +39,11 @@ class AnnouncementIndex
       .where({serviceType:"discovery"})
       .pluck("serviceUri")
       .value()
+    @discoveryClient.serverList.addServers(@discoveryServers)
 
   getDiscoveryServers:()->
     @discoveryServers
+
 
   serviceTypePredicate:(serviceType)-> (announcement)->
     serviceType in [
