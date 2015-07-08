@@ -19,8 +19,10 @@ module.exports = class DiscoveryAnnouncer
       Promise.reject(error)
 
   announce:(announcement, callback)->
-    Utils.promiseRetry =>
-      @attemptAnnounce(announcement)
+    # Utils.promiseRetry(=>
+    @attemptAnnounce(announcement)
+      .nodeify(callback)
+
 
   removeAnnouncement:(announcement)->
     @announcements = _.without(@announcements, announcement)
@@ -29,7 +31,7 @@ module.exports = class DiscoveryAnnouncer
     @attemptUnannounce(announcement)
       .nodeify(callback)
 
-  attemptUnannounce:(announcement)->
+  attemptUnannounce:(announcement)=>
     @server = @discoveryClient.serverList.getRandom()
     @removeAnnouncement(announcement)
     unless @server
@@ -46,7 +48,7 @@ module.exports = class DiscoveryAnnouncer
       @discoveryClient.notifyError(error)
     )
 
-  attemptAnnounce:(announcement)->
+  attemptAnnounce:(announcement)=>
     announcement.announcementId or= uuid.v4()
     @server = @discoveryClient.serverList.getRandom()
 
@@ -57,16 +59,17 @@ module.exports = class DiscoveryAnnouncer
       return Promise.reject(new Error(errorMessage))
 
     @discoveryClient.log "debug", "Announcing " + JSON.stringify(announcement)
-
+    url = @server + "/announcement"
+    console.log url
     RequestPromise({
-      url:@server + "/announcement"
+      url:url
       method:"POST"
       json:true
       body:announcement
     }).catch(@handleError).then(@handleResponse)
 
 
-  handleError:(error)->
+  handleError:(error)=>
     @discoveryClient.serverList.dropServer(@server)
     Promise.reject(error)
 

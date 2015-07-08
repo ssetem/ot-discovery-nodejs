@@ -7,8 +7,15 @@ var fullUpdate;
 var noUpdate;
 var announcement;
 var announcementFailure;
+var discoOptions = {
+  logger: {
+    log: function(level, log, update){ console.log.apply(console, arguments); },
+    error: function(){ },
+  }
+}
 
 describe.only('# announce tests', function(){
+  this.timeout(60000)
   beforeEach(function(done){
     nock.cleanAll();
     nock.disableNetConnect();
@@ -28,35 +35,33 @@ describe.only('# announce tests', function(){
       "serviceType":"my-new-service-failed",
       "serviceUri":"http://my-new-service:8080"
     }
-
-      fullUpdate = nock(constants.DISCOVERY_URL)
-            .get('/watch')
-            .reply(200, {
-              "fullUpdate":true,
-              "index":100,
-              "deletes":[],
-              "updates":[
-                  {
-                    "announcementId":"discoveryId",
-                    "staticAnnouncement":false,
-                    "announceTime":"2015-03-30T18:26:52.178Z",
-                    "serviceType":"discovery",
-                    "serviceUri":constants.DISCOVERY_SERVER_URLS[0]
-                  },
-                  {
-                    "announcementId":"myserviceId",
-                    "staticAnnouncement":false,
-                    "announceTime":"2015-03-30T18:26:52.178Z",
-                    "serviceType":"myservice",
-                    "serviceUri":"http://1.1.1.1:2"
-                  }
-                ]
-              });
-
+    fullUpdate = nock(constants.DISCOVERY_URL)
+      .get('/watch')
+      .reply(200, {
+        "fullUpdate":true,
+        "index":100,
+        "deletes":[],
+        "updates":[
+            {
+              "announcementId":"discoveryId",
+              "staticAnnouncement":false,
+              "announceTime":"2015-03-30T18:26:52.178Z",
+              "serviceType":"discovery",
+              "serviceUri":constants.DISCOVERY_SERVER_URLS[0]
+            },
+            {
+              "announcementId":"myserviceId",
+              "staticAnnouncement":false,
+              "announceTime":"2015-03-30T18:26:52.178Z",
+              "serviceType":"myservice",
+              "serviceUri":"http://1.1.1.1:2"
+            }
+          ]
+        });
     noUpdate = nock(constants.DISCOVERY_SERVER_URLS[0])
-            .get('/watch?since=' + 101)
-            .delayConnection(10000)
-            .reply(204);
+      .get('/watch?since=' + 101)
+      .delayConnection(1000)
+      .reply(204);
 
     announce = nock(constants.DISCOVERY_SERVER_URLS[0])
             .post('/announcement', announcement)
@@ -70,52 +75,52 @@ describe.only('# announce tests', function(){
    });
 
   afterEach(function(done) {
+    if(this.disco && this.disco.dispose) {
+      this.disco.dispose()
+    }
     nock.cleanAll();
     nock.enableNetConnect();
     done();
   });
 
-    it.only('should announce calling /announce endpoint', function (done) {
-      var disco = new discovery(constants.DISCOVERY_HOST, {
-        logger: {
-          log: function(level, log, update){ console.log(log); },
-          error: function(){ },
-        }
-      });
+    it('should announce calling /announce endpoint', function (done) {
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, discoOptions);
 
       disco.connect(function(error, host, servers) {
         fullUpdate.done();
+        console.log(arguments)
+        assert.equal(constants.DISCOVERY_HOST, host)
+        assert.deepEqual(servers, [constants.DISCOVERY_SERVER_URLS[0]])
         disco.announce(announcement, function (error, lease) {
+          assert.deepEqual(lease, announcement)
         });
       });
 
       setTimeout(function() {
         noUpdate.done();
-        // announce.done();
-        done();
+        announce.done();
+        done()
       }, 1000);
     });
 
-    // it('should take server out of rotation on announcement failure', function (done) {
-    //   var disco = new discovery(constants.DISCOVERY_HOST, {
-    //     logger: {
-    //       log: function(level, log, update){ console.log(log); },
-    //       error: function(){ },
-    //     }
-    //   });
+    it('should take server out of rotation on announcement failure', function (done) {
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, discoOptions);
 
-    //   disco.connect(function(error, host, servers) {
-    //     fullUpdate.done();
-    //     assert.equal(1, disco.servers.length);
-    //     assert.equal(constants.DISCOVERY_SERVER_URLS[0], disco.servers[0]);
-    //     disco.announce(announcementFailure, function (error, lease) {
-    //     });
-    //   });
+      disco.connect(function(error, host, servers) {
+        console.log(arguments)
+        fullUpdate.done();
+        assert.equal(1, disco.getServers().length);
+        assert.equal(constants.DISCOVERY_SERVER_URLS[0], disco.getServers()[0]);
+        disco.announce(announcementFailure, function (error, lease) {
+          assert.equal(error.status, 404)
+          assert.equal(lease, undefined)
+        });
+      });
 
-    //   setTimeout(function() {
-    //     noUpdate.done();
-    //     assert.equal(0, disco.servers.length);
-    //     done();
-    //   }, 1000);
-    //   })
+      setTimeout(function() {
+        noUpdate.done();
+        assert.equal(0, disco.getServers().length);
+        done();
+      }, 200);
+    })
 });

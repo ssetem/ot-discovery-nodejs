@@ -4,6 +4,7 @@ DiscoveryAnnouncer = require "./DiscoveryAnnouncer"
 DiscoveryLongPoller = require "./DiscoveryLongPoller"
 ServerList = require "./ServerList"
 Utils = require "./Utils"
+Promise = require "bluebird"
 
 class DiscoveryClient
 
@@ -27,26 +28,49 @@ class DiscoveryClient
       .then(@saveUpdates)
       .then(@longPollForUpdates)
       .then(@startAnnouncementHeartbeat)
-      .nodeify(callback)
+      .then ()=>
+        if callback
+          return callback null, @host, @serverList.servers
+        else
+          @servers
+      .catch (e)=>
+        if callback
+          return callback(e)
+        else
+          Promise.reject(e)
 
-  startAnnouncementHeartbeat:()=>
+  stopAnnouncementHeartbeat:()=>
     if @heartbeatIntervalId
       clearInterval(@heartbeatIntervalId)
+
+  startAnnouncementHeartbeat:()=>
+    @stopAnnouncementHeartbeat()
     heartbeatIntervalMs = 10 * 1000
     @heartbeatIntervalId = setInterval(
       @discoveryAnnouncer.pingAllAnnouncements
       heartbeatIntervalMs
     )
+    return
 
   reconnect:()->
     @connect()
 
+  dispose:()->
+    @stopAnnouncementHeartbeat()
+    @discoveryLongPoller.stopPolling()
+
+  getHostAndServers:()=>
+    [@host, @serverList.servers]
+
   saveUpdates:(update)=>
-    console.log update
     @announcementIndex.processUpdate(update)
 
   longPollForUpdates:()=>
     @discoveryLongPoller.startPolling()
+    return
+
+  getServers:()->
+    @serverList.servers
 
   announce:(announcement, callback)->
     @discoveryAnnouncer.announce(

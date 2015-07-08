@@ -13,6 +13,9 @@ class DiscoveryLongPoller
     @shouldBePolling = true
     @schedulePoll()
 
+  stopPolling:()->
+    @shouldBePolling = false
+
   schedulePoll:()=>
     return unless @shouldBePolling
     if @discoveryClient.serverList.isEmpty()
@@ -23,17 +26,19 @@ class DiscoveryLongPoller
   poll:()=>
     @server = @discoveryClient.serverList.getRandom()
     @nextIndex = @discoveryClient.announcementIndex.index + 1
-    url = "http://#{@server}/watch?since=#{@nextIndex}"
+    url = "#{@server}/watch?since=#{@nextIndex}"
     RequestPromise(url:url, json:true)
       .catch(@handleError)
       .then(@handleResponse)
 
   handleError:(error)=>
+    return unless @shouldBePolling
     @discoveryClient.notifyError(error)
     @discoveryClient.serverList.dropServer(@server)
     @schedulePoll()
 
   handleResponse:(response)=>
+    return unless @shouldBePolling
     #no new updates
     if response.statusCode is 204
       @schedulePoll()

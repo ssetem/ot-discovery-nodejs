@@ -2,7 +2,7 @@ Promise = require "bluebird"
 
 
 
-module.exports = new class Utils
+class Utils
 
 
   promiseRetry:(fn, times=Infinity, backoff=1)->
@@ -18,3 +18,5 @@ module.exports = new class Utils
   invokeAll:(fns, args...)->
     for fn in fns
       fn.apply(null, args)
+
+module.exports = new Utils

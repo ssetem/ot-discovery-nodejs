@@ -13,7 +13,8 @@ class DiscoveryConnector
     "http://#{@host}/watch"
 
   connect:()->
-    Utils.promiseRetry @attemptConnect
+    # Utils.promiseRetry(@attemptConnect)
+    @attemptConnect()
 
 
   attemptConnect:()=>
@@ -22,7 +23,7 @@ class DiscoveryConnector
       .catch(@handleError)
 
   handleError:(error)=>
-    @discoveryClient.notifyErrors(error)
+    @discoveryClient.notifyError(error)
     Promise.reject(error)
 
   handle:(response)->

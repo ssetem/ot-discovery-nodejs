@@ -29,6 +29,10 @@ DiscoveryClient.prototype._randomServer = function() {
   return this.servers[Math.floor(Math.random()*this.servers.length)];
 };
 
+DiscoveryClient.prototype.getServers = function(){
+  return this.servers;
+};
+
 /* Consume a WatchResult from the discovery server and update internal state */
 DiscoveryClient.prototype._update = function (update) {
   var disco = this;
@@ -245,7 +249,7 @@ DiscoveryClient.prototype._singleAnnounce = function (announcement, cb) {
   if (!server) {
     this.logger.log('info', 'Cannot announce. No discovery servers available');
     cb(new Error('Cannot announce. No discovery servers available'));
-    disco._scheduleReconnect(); 
+    disco._scheduleReconnect();
     return;
   }
   this.logger.log('debug', 'Announcing ' + JSON.stringify(announcement));
