@@ -86,34 +86,27 @@ describe('# announce tests', function(){
         assert.deepEqual(servers, [constants.DISCOVERY_SERVER_URLS[0]])
         disco.announce(announcement, function (error, lease) {
           assert.deepEqual(lease, announcement)
+          noUpdate.done();
+          announce.done();
+          done()
         });
       });
-
-      setTimeout(function() {
-        noUpdate.done();
-        announce.done();
-        done()
-      }, 1000);
     });
 
     it('should take server out of rotation on announcement failure', function (done) {
       var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
-
+      disco.discoveryAnnouncer.ANNOUNCE_ATTEMPTS=1
       disco.connect(function(error, host, servers) {
-        console.log(arguments)
         fullUpdate.done();
         assert.equal(1, disco.getServers().length);
         assert.equal(constants.DISCOVERY_SERVER_URLS[0], disco.getServers()[0]);
         disco.announce(announcementFailure, function (error, lease) {
-          assert.equal(error.status, 404)
+          assert(!!error)
           assert.equal(lease, undefined)
+          noUpdate.done();
+          assert.equal(0, disco.getServers().length);
+          done();
         });
       });
-
-      setTimeout(function() {
-        noUpdate.done();
-        assert.equal(0, disco.getServers().length);
-        done();
-      }, 200);
     })
 });

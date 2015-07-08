@@ -10,6 +10,7 @@ module.exports = class DiscoveryAnnouncer
 
   constructor:(@discoveryClient)->
     @announcements = []
+    @ANNOUNCE_ATTEMPTS = 20
 
   pingAllAnnouncements:()=>
     Promise.all(_.map(
@@ -19,9 +20,9 @@ module.exports = class DiscoveryAnnouncer
       Promise.reject(error)
 
   announce:(announcement, callback)->
-    # Utils.promiseRetry(=>
-    @attemptAnnounce(announcement)
-      .nodeify(callback)
+    Utils.promiseRetry(=>
+      @attemptAnnounce(announcement)
+    ,@ANNOUNCE_ATTEMPTS).nodeify(callback)
 
 
   removeAnnouncement:(announcement)->
@@ -66,7 +67,7 @@ module.exports = class DiscoveryAnnouncer
       method:"POST"
       json:true
       body:announcement
-    }).catch(@handleError).then(@handleResponse)
+    }).then(@handleResponse).catch(@handleError)
 
 
   handleError:(error)=>
