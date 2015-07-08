@@ -18,7 +18,10 @@ class DiscoveryConnector
 
 
   attemptConnect:()=>
-    RequestPromise(url:@connectUrl(), json:true)
+    url = @connectUrl()
+    @discoveryClient.log("debug", "Attempting connection to #{url}")
+
+    RequestPromise(url:url, json:true)
       .then(@handle)
       .catch(@handleError)
 

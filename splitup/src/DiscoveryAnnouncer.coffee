@@ -9,7 +9,7 @@ module.exports = class DiscoveryAnnouncer
 
 
   constructor:(@discoveryClient)->
-    @announcements = []
+    @announcements = {}
     @ANNOUNCE_ATTEMPTS = 20
 
   pingAllAnnouncements:()=>
@@ -26,7 +26,7 @@ module.exports = class DiscoveryAnnouncer
 
 
   removeAnnouncement:(announcement)->
-    @announcements = _.without(@announcements, announcement)
+    delete @announcements[announcement.announcementId]
 
   unannounce:(announcement, callback)->
     @attemptUnannounce(announcement)
@@ -39,9 +39,9 @@ module.exports = class DiscoveryAnnouncer
       errorMessage = 'Cannot unannounce. No discovery servers available'
       @discoveryClient.log "info", errorMessage
       return Promise.reject(new Error(errorMessage))
-
+    url = "#{@server}/announcement/#{announcement.announcementId}"
     RequestPromise({
-      url:"#{@server}/announcement/#{announcement.announcementId}"
+      url:url
       method:"DELETE"
     }).then( (response)=>
       @discoveryClient.log("info", "Unannounce DELETE '" + url + "' returned " + response.statusCode + ": " + JSON.stringify(response.body))
@@ -67,20 +67,22 @@ module.exports = class DiscoveryAnnouncer
       method:"POST"
       json:true
       body:announcement
-    }).then(@handleResponse).catch(@handleError)
+    }).catch(@handleError).then(@handleResponse)
 
 
   handleError:(error)=>
+
     @discoveryClient.serverList.dropServer(@server)
     Promise.reject(error)
 
   handleResponse:(response)=>
     unless response.statusCode is 201
-      return Promise.reject(new Error(
-        "During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
+      error = new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}")
+      @discoveryClient.notifyError(error)
+      return Promise.reject(error)
     announcement = response.body
     @discoveryClient.log(
       "info", "Announced as " + JSON.stringify(announcement))
-    @announcements.push(announcement)
+    @announcements[announcement.announcementId] = announcement
     return announcement
 

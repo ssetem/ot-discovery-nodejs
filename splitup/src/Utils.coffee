@@ -5,7 +5,7 @@ Promise = require "bluebird"
 class Utils
 
 
-  promiseRetry:(fn, times=Infinity, backoff=1)->
+  promiseRetry:(fn, times=Infinity, backoff=500)->
     self = this
     fn().catch (e)=>
       if times is 0

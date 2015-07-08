@@ -11,7 +11,7 @@ class ServerList
     _.sample(@servers)
 
   addServers:(servers=[])->
-    @discoveryClient.log('info', 'Adding discovery servers ' + servers)
+    @discoveryClient.log('info', 'Syncing discovery servers ' + servers)
     @servers = _.uniq(@servers.concat servers)
 
   isEmpty:()->
