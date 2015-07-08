@@ -1,11 +1,17 @@
 AnnouncementIndex = require("#{srcDir}/AnnouncementIndex")
+DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 
 
 describe "AnnouncementIndex", ->
 
   beforeEach ->
-    @announcementIndex = new AnnouncementIndex()
-
+    @discoveryClient = new DiscoveryClient("host", {
+      logger:
+        logs:[]
+        log:()->
+          @logs.push(arguments)
+    })
+    @announcementIndex = @discoveryClient.announcementIndex
     @sampleAnnouncements = [
       {
         "announcementId":"a1",
@@ -29,7 +35,6 @@ describe "AnnouncementIndex", ->
 
   it "should exist", ->
     expect(@announcementIndex).to.exist
-
 
   it "addAnnouncements", ->
 
@@ -63,6 +68,8 @@ describe "AnnouncementIndex", ->
     @announcementIndex.computeDiscoveryServers()
     expect(@announcementIndex.getDiscoveryServers())
       .to.deep.equal [@sampleAnnouncements[1].serviceUri]
+    expect(@discoveryClient.getServers())
+      .to.deep.equal [@sampleAnnouncements[1].serviceUri]
 
 
   it "processUpdate - fullUpdate", ->
@@ -93,32 +100,30 @@ describe "AnnouncementIndex", ->
   it "findAll()", ->
     expect(@announcementIndex.findAll()).to.deep.equal []
     expect(@announcementIndex.findAll("discovery")).to.deep.equal [
-      @sampleAnnouncements[0]
+      @sampleAnnouncements[0].serviceUri
     ]
     expect(@announcementIndex.findAll("discovery:none"))
       .to.deep.equal []
     expect(@announcementIndex.findAll("discovery:test")).to.deep.equal [
-      @sampleAnnouncements[0]
+      @sampleAnnouncements[0].serviceUri
     ]
     predicate = (announcement)->
       announcement.serviceType is "myservice"
     expect(@announcementIndex.findAll(predicate)).to.deep.equal [
-      @sampleAnnouncements[1]
+      @sampleAnnouncements[1].serviceUri
     ]
 
   it "find()", ->
     expect(@announcementIndex.find()).to.equal undefined
     expect(@announcementIndex.find("discovery"))
-      .to.deep.equal @sampleAnnouncements[0]
-
+      .to.deep.equal @sampleAnnouncements[0].serviceUri
     @announcementIndex.addAnnouncements [
-      { "announcementId":"d1", "serviceType":"discovery" }
-      { "announcementId":"d2", "serviceType":"discovery" }
-      { "announcementId":"d3", "serviceType":"discovery" }
+      { "announcementId":"d1", "serviceType":"discovery", serviceUri:"uri" }
+      { "announcementId":"d2", "serviceType":"discovery", serviceUri:"uri" }
+      { "announcementId":"d3", "serviceType":"discovery", serviceUri:"uri"}
     ]
 
-    expect(@announcementIndex.find("discovery").announcementId in ["a1", "d1", "d2", "d3"])
-      .to.equal true
+    expect(@announcementIndex.find("discovery")).to.exist
 
 
 

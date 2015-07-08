@@ -1,13 +1,20 @@
 ServerList = require("#{srcDir}/ServerList")
+DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 
 
 describe "ServerList", ->
 
   beforeEach ->
-    @serverList = new ServerList()
+    @discoveryClient = new DiscoveryClient("host", {
+      logger:
+        logs:[]
+        log:()->
+          @logs.push(arguments)
+    })
+    @serverList = @discoveryClient.serverList
 
   it "should exist", ->
-    expect(ServerList).toExist
+    expect(@serverList).toExist
 
   it "addServers()", ->
     @serverList.addServers(["s1", "s2"])

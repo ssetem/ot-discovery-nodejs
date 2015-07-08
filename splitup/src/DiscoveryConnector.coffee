@@ -13,8 +13,8 @@ class DiscoveryConnector
     "http://#{@host}/watch"
 
   connect:()->
-    # Utils.promiseRetry(@attemptConnect)
-    @attemptConnect()
+    Utils.promiseRetry(@attemptConnect)
+    # @attemptConnect()
 
 
   attemptConnect:()=>
