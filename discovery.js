@@ -33,6 +33,10 @@ DiscoveryClient.prototype.getServers = function(){
   return this.servers;
 };
 
+DiscoveryClient.prototype.getAnnoucements = function(){
+  return this.state.announcements;
+};
+
 /* Consume a WatchResult from the discovery server and update internal state */
 DiscoveryClient.prototype._update = function (update) {
   var disco = this;

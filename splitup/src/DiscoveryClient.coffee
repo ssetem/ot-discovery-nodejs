@@ -72,6 +72,9 @@ class DiscoveryClient
   getServers:()->
     @serverList.servers
 
+  getAnnouncements:()->
+    @announcementIndex.announcements
+
   announce:(announcement, callback)->
     @discoveryAnnouncer.announce(
       announcement, callback)
@@ -79,6 +82,12 @@ class DiscoveryClient
   unannounce:(announcement, callback)->
     @discoveryAnnouncer.unannounce(
       announcement, callback)
+
+  find:(predicate)->
+    @announcementIndex.find(predicate)
+
+  findAll:(predicate)->
+    @announcementIndex.findAll(predicate)
 
   notifyError:(error)->
     Utils.invokeAll(@errorHandlers, error)

@@ -1,6 +1,7 @@
 var assert = require('assert');
 var nock = require('nock');
-var discovery = require('./../discovery.js');
+// var discovery = require('./../discovery.js');
+var discovery = require('./../splitup/discovery.js');
 var constants = require('./testConstants.js');
 var fullUpdate;
 var noUpdate;
@@ -42,18 +43,16 @@ describe('# full update followed by no updates tests', function(){
    });
 
   afterEach(function(done) {
+      if(this.disco && this.disco.dispose) {
+      this.disco.dispose()
+    }
     nock.cleanAll();
     nock.enableNetConnect();
     done();
   });
 
     it('should call watch, watch?since= and correctly populate announcements', function (done){
-       var disco = new discovery(constants.DISCOVERY_HOST, {
-      logger: {
-        log: function(level, log, update){ console.log(log); },
-        error: function(){ console.log(log); },
-      }
-    });
+       var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
 
     disco.connect(function(error, host, servers) {
       fullUpdate.done();
@@ -69,12 +68,12 @@ describe('# full update followed by no updates tests', function(){
     setTimeout(function() {
       assert.equal(false, onUpdateReceived);
       noUpdate.done();
-      var announcements = disco.state.announcements;
+      var announcements = disco.getAnnouncements();
       assert.equal(true, announcements.hasOwnProperty('discoveryId'));
       assert.equal(true, announcements.hasOwnProperty('myserviceId'));
       assert.equal('discovery', announcements['discoveryId'].serviceType);
       assert.equal('myservice', announcements['myserviceId'].serviceType);
-      assert.equal(2, Object.keys(disco.state.announcements).length);
+      assert.equal(2, Object.keys(announcements).length);
       done();
     }, 1500);
     })

@@ -7,14 +7,8 @@ var fullUpdate;
 var noUpdate;
 var announcement;
 var announcementFailure;
-var discoOptions = {
-  logger: {
-    log: function(level, log, update){ console.log.apply(console, arguments); },
-    error: function(){ },
-  }
-}
 
-describe.only('# announce tests', function(){
+describe('# announce tests', function(){
   this.timeout(60000)
   beforeEach(function(done){
     nock.cleanAll();
@@ -84,11 +78,10 @@ describe.only('# announce tests', function(){
   });
 
     it('should announce calling /announce endpoint', function (done) {
-      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, discoOptions);
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
 
       disco.connect(function(error, host, servers) {
         fullUpdate.done();
-        console.log(arguments)
         assert.equal(constants.DISCOVERY_HOST, host)
         assert.deepEqual(servers, [constants.DISCOVERY_SERVER_URLS[0]])
         disco.announce(announcement, function (error, lease) {
@@ -104,7 +97,7 @@ describe.only('# announce tests', function(){
     });
 
     it('should take server out of rotation on announcement failure', function (done) {
-      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, discoOptions);
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
 
       disco.connect(function(error, host, servers) {
         console.log(arguments)

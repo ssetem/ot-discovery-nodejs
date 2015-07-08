@@ -1,6 +1,8 @@
 var assert = require("assert");
 var nock = require('nock');
-var discovery = require('./../discovery.js');
+// var discovery = require('./../discovery.js');
+var discovery = require('./../splitup/discovery.js');
+
 var constants = require('./testConstants.js');
 var utils = require('./testUtils.js');
 var fullUpdate;
@@ -70,61 +72,62 @@ describe('# full-update followed by some updates tests', function(){
    });
 
   afterEach(function(done) {
+    if(this.disco && this.disco.dispose) {
+      this.disco.dispose()
+    }
     nock.cleanAll();
     nock.enableNetConnect();
     done();
   });
 
     it('should call watch, watch?since= and correctly populate announcements', function (done){
-       this.timeout(constants.TIMEOUT_MS);
-       var disco = new discovery(constants.DISCOVERY_HOST, {
-      logger: {
-        log: function(level, log, update){ console.log(log); },
-        error: function(){ },
-      }
-    });
+      this.timeout(constants.TIMEOUT_MS);
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
 
       disco.connect(function(error, host, servers) {
-      fullUpdate.done();
-    });
+        assert.equal(constants.DISCOVERY_HOST, host)
+        assert.deepEqual(servers, [constants.DISCOVERY_SERVER_URLS[0]])
+
+        fullUpdate.done();
+      });
 
       var onUpdateReceived = false;
       var start = new Date();
-    disco.onUpdate(function(arg1, arg2, arg3) {
-      onUpdateReceived = true;
-      assertUpdateWasReceived();
-      assertUpdateWasReceivedOnTime();
-      smallUpdate.done();
-      assertStates();
-    });
+      disco.onUpdate(function(arg1, arg2, arg3) {
+        onUpdateReceived = true;
+        assertUpdateWasReceived();
+        assertUpdateWasReceivedOnTime();
+        smallUpdate.done();
+        assertStates();
+      });
 
-    setTimeout(function() {
-      assertUpdateWasReceived();
-      noUpdate.done();
-      assertStates();
-      done();
-    }, TOTAL_TEST_TIME);
+      setTimeout(function() {
+        assertUpdateWasReceived();
+        noUpdate.done();
+        assertStates();
+        done();
+      }, TOTAL_TEST_TIME);
 
-    function assertUpdateWasReceived() {
-      assert.equal(true, onUpdateReceived);
-    }
+      function assertUpdateWasReceived() {
+        assert.equal(true, onUpdateReceived);
+      }
 
-    function assertUpdateWasReceivedOnTime() {
-      var end = new Date();
-      var timeDiff = utils.timeDiffMS(end, start);
-      var timeDiffAcceptable = (timeDiff < UPDATE_TIME_DELAY_MS + ACCEPTABLE_UPDATE_LAG);
-      assert.equal(true, timeDiffAcceptable);
-    }
+      function assertUpdateWasReceivedOnTime() {
+        var end = new Date();
+        var timeDiff = utils.timeDiffMS(end, start);
+        var timeDiffAcceptable = (timeDiff < UPDATE_TIME_DELAY_MS + ACCEPTABLE_UPDATE_LAG);
+        assert.equal(true, timeDiffAcceptable);
+      }
 
-    function assertStates() {
-      var announcements = disco.state.announcements;
-      assert.equal(3, Object.keys(disco.state.announcements).length);
-      assert.equal(true, announcements.hasOwnProperty('discovery'));
-      assert.equal(true, announcements.hasOwnProperty('new1'));
-      assert.equal(true, announcements.hasOwnProperty('new2'));
-      assert.equal('discovery', announcements['discovery'].serviceType);
-      assert.equal('my-service-new1', announcements['new1'].serviceType);
-      assert.equal('my-service-new2', announcements['new2'].serviceType);
-    }
+      function assertStates() {
+        var announcements = disco.getAnnouncements();
+        assert.equal(3, Object.keys(announcements).length);
+        assert.equal(true, announcements.hasOwnProperty('discovery'));
+        assert.equal(true, announcements.hasOwnProperty('new1'));
+        assert.equal(true, announcements.hasOwnProperty('new2'));
+        assert.equal('discovery', announcements['discovery'].serviceType);
+        assert.equal('my-service-new1', announcements['new1'].serviceType);
+        assert.equal('my-service-new2', announcements['new2'].serviceType);
+      }
     });
  });

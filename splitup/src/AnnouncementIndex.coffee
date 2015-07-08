@@ -10,7 +10,7 @@ class AnnouncementIndex
     @index = -1
 
 
-  processUpdate:(update)->
+  processUpdate:(update, shouldNotify)->
     if update.fullUpdate
       @clearAnnouncements()
 
@@ -18,7 +18,8 @@ class AnnouncementIndex
     @removeAnnouncements(update.deletes)
     @addAnnouncements(update.updates)
     @computeDiscoveryServers()
-    @discoveryClient.notifyWatchers(update)
+    if shouldNotify
+      @discoveryClient.notifyWatchers(update)
 
   removeAnnouncements:(ids=[])->
     @announcements = _.omit(@announcements, ids)
@@ -56,7 +57,10 @@ class AnnouncementIndex
     unless _.isFunction(predicate)
       predicate = @serviceTypePredicate(predicate)
 
-    _.filter(@announcements, predicate)
+    _.chain(@announcements)
+      .filter(predicate)
+      .pluck("serviceUri")
+      .value()
 
   find:(predicate)->
     _.sample @findAll(predicate)

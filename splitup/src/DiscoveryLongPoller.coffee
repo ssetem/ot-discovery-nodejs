@@ -49,7 +49,7 @@ class DiscoveryLongPoller
       @discoveryClient.serverList.dropServer(@server)
       @schedulePoll()
     else
-      @discoveryClient.announcementIndex.processUpdate(response.body)
+      @discoveryClient.announcementIndex.processUpdate(response.body, true)
       @schedulePoll()
 
 module.exports = DiscoveryLongPoller

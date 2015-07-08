@@ -1,10 +1,14 @@
 describe('discovery', function(){
-  var discovery = require("../discovery"),
-      should = require("should"),
-      disco, host, servers;
+  var nock = require("nock");
+  var discovery = require("../discovery");
+  var discovery = require('./../splitup/discovery.js');
+  var should = require("should");
+  var disco, host, servers;
 
   before(function(done){
-    disco = new discovery("127.0.0.1:8888", { logger: { log: function(log){}, error: function(err){}}});
+    nock.cleanAll();
+    nock.enableNetConnect();
+    this.disco = disco = new discovery("127.0.0.1:8888", { logger: { log: function(log){}, error: function(err){}}});
     disco.connect(function(err, h, s){
       if(err){
         throw err;
@@ -15,6 +19,12 @@ describe('discovery', function(){
       done();
     });
   });
+
+  after(function(){
+    if(this.disco && this.disco.dispose) {
+      this.disco.dispose()
+    }
+  })
 
   it('should connect', function(){
     host.should.equal('127.0.0.1:8888');
