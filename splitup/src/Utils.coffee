@@ -1,5 +1,5 @@
 Promise = require "bluebird"
-
+uuid = require "node-uuid"
 
 
 class Utils
@@ -13,10 +13,13 @@ class Utils
       else
         Promise.delay(backoff).then ->
           newBackoff = Math.min(backoff * 2, 10240)
-          self.promiseRetry fn, newBackoff, times-1
+          self.promiseRetry fn, times-1, newBackoff
 
   invokeAll:(fns, args...)->
     for fn in fns
       fn.apply(null, args)
+
+  generateUUID:()->
+    uuid.v4()
 
 module.exports = new Utils

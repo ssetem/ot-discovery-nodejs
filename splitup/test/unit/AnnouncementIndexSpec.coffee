@@ -73,6 +73,7 @@ describe "AnnouncementIndex", ->
 
 
   it "processUpdate - fullUpdate", ->
+    @discoveryClient.onUpdate (@update)=>
     @announcementIndex.processUpdate({
       fullUpdate:true
       index:1
@@ -81,7 +82,7 @@ describe "AnnouncementIndex", ->
         {announcementId:"b1", serviceType:"gc-web", serviceUri:"gcweb.otenv.com"}
         {announcementId:"b2", serviceType:"discovery", serviceUri:"discovery.otenv.com"}
       ]
-    })
+    }, true)
     expect(@announcementIndex.announcements).to.deep.equal {
       b1:
         announcementId: 'b1',
@@ -96,6 +97,7 @@ describe "AnnouncementIndex", ->
     expect(@announcementIndex.discoveryServers).to.deep.equal [
       "discovery.otenv.com"
     ]
+    expect(@update.index).to.equal 1
 
   it "findAll()", ->
     expect(@announcementIndex.findAll()).to.deep.equal []
