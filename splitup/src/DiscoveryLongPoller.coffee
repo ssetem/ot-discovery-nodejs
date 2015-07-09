@@ -33,20 +33,22 @@ class DiscoveryLongPoller
 
   handleError:(error)=>
     return unless @shouldBePolling
-    @discoveryClient.notifyError(error)
     @discoveryClient.serverList.dropServer(@server)
+    @discoveryClient.notifyError(error)
     @schedulePoll()
 
   handleResponse:(response)=>
     return unless @shouldBePolling
     #no new updates
-    if response.statusCode is 204
+    unless response?.statusCode
+      @handleError(new Error("Could not connect to #{@server}"))
+    else if response.statusCode is 204
       @schedulePoll()
     #bad status code
     else if response.statusCode isnt 200
       error = new Error("Bad status code " + response.statusCode + " from watch: " + response)
-      @discoveryClient.notifyError(error)
       @discoveryClient.serverList.dropServer(@server)
+      @discoveryClient.notifyError(error)
       @schedulePoll()
     else
       @discoveryClient.announcementIndex.processUpdate(response.body, true)
