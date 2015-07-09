@@ -14,7 +14,7 @@ module.exports = class DiscoveryAnnouncer
 
   pingAllAnnouncements:()=>
     Promise.all(_.map(@announcements, @attemptAnnounce))
-      .catch(@notifyAndReject)
+      .catch(@discoveryClient.notifyAndReject)
 
   announce:(announcement, callback)->
     Utils.promiseRetry(
@@ -33,7 +33,7 @@ module.exports = class DiscoveryAnnouncer
 
     unless @server
       @discoveryClient.reconnect()
-      return @notifyAndReject(new Error("Cannot announce. No discovery servers available"))
+      return @discoveryClient.notifyAndReject(new Error("Cannot announce. No discovery servers available"))
 
     @discoveryClient.log "debug", "Announcing " + JSON.stringify(announcement)
     url = @server + "/announcement"
@@ -47,13 +47,11 @@ module.exports = class DiscoveryAnnouncer
 
   handleError:(error)=>
     @discoveryClient.serverList.dropServer(@server)
-    @notifyAndReject(error)
+    @discoveryClient.notifyAndReject(error)
 
   handleResponse:(response)=>
     unless response?.statusCode is 201
-      unless response.statusCode?
-        @discoveryClient.serverList.dropServer(@server)
-      return @notifyAndReject(new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
+      return @discoveryClient.notifyAndReject(new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
     announcement = response.body
     @discoveryClient.log(
       "info", "Announced as " + JSON.stringify(announcement))
@@ -68,7 +66,7 @@ module.exports = class DiscoveryAnnouncer
     @server = @discoveryClient.serverList.getRandom()
     @removeAnnouncement(announcement)
     unless @server
-      return @notifyAndReject(new Error("Cannot unannounce. No discovery servers available"))
+      return @discoveryClient.notifyAndReject(new Error("Cannot unannounce. No discovery servers available"))
 
     url = "#{@server}/announcement/#{announcement.announcementId}"
     RequestPromise({
@@ -76,8 +74,5 @@ module.exports = class DiscoveryAnnouncer
       method:"DELETE"
     }).then( (response)=>
       @discoveryClient.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
-    ).catch(@notifyAndReject)
+    ).catch(@discoveryClient.notifyAndReject)
 
-  notifyAndReject:(error)=>
-    @discoveryClient.notifyError(error)
-    return Promise.reject(error)

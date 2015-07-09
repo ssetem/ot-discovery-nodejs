@@ -14,8 +14,6 @@ class DiscoveryConnector
 
   connect:()->
     Utils.promiseRetry(@attemptConnect)
-    # @attemptConnect()
-
 
   attemptConnect:()=>
     url = @connectUrl()
@@ -23,22 +21,20 @@ class DiscoveryConnector
 
     RequestPromise(url:url, json:true)
       .then(@handle)
-      .catch(@handleError)
+      .catch(@discoveryClient.notifyAndReject)
 
-  handleError:(error)=>
-    @discoveryClient.notifyError(error)
-    Promise.reject(error)
-
-  handle:(response)->
+  handle:(response)=>
     if response.statusCode != 200
-      return Promise.reject(
+      return @discoveryClient.notifyAndReject(
         new Errors.DiscoveryConnectError(response.body))
 
     update = response.body
 
     unless update?.fullUpdate
-      return Promise.reject(
+      return @discoveryClient.notifyAndReject(
         new Errors.DiscoveryFullUpdateError(update))
+
+    @discoveryClient.log 'debug', 'Discovery update: ' + JSON.stringify(update)
 
     #TODO: log debug statement
     return update

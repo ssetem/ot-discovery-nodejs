@@ -104,4 +104,8 @@ class DiscoveryClient
   log:(args...)->
     @logger.log.apply(@logger, args)
 
+  notifyAndReject:(error)=>
+    @notifyError(error)
+    return Promise.reject(error)
+
 module.exports = DiscoveryClient
