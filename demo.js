@@ -1,5 +1,5 @@
 var discovery = require('./discovery');
-var terminalArg = process.argv[2]
+var terminalArg = process.argv[2];
 var disco = new discovery(terminalArg || "discovery-proxy.proxy.mesos-vpcqa.otenv.com");
 disco.onError(function(error) {
   console.warn(error);
