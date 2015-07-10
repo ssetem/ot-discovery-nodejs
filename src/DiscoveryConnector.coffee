@@ -1,10 +1,9 @@
-Promise = require "bluebird"
-Errors = require "./Errors"
+Promise        = require "bluebird"
+Errors         = require "./Errors"
 RequestPromise = require "./RequestPromise"
-Utils = require "./Utils"
+Utils          = require "./Utils"
 
 class DiscoveryConnector
-
 
   constructor:(@discoveryClient)->
     @host = @discoveryClient.host
@@ -42,7 +41,6 @@ class DiscoveryConnector
 
     @discoveryClient.log 'debug', 'Discovery update: ' + JSON.stringify(update)
 
-    #TODO: log debug statement
     return update
 
 module.exports = DiscoveryConnector

@@ -1,8 +1,8 @@
 {
   "name": "ot-discovery",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Discovery Client",
-  "main": "splitup/discovery.js",
+  "main": "discovery.js",
   "scripts": {
     "test": "grunt"
   },
@@ -21,8 +21,10 @@
   "devDependencies": {
     "assert": "~1.3.0",
     "chai": "^3.0.0",
+    "coffeelint": "^1.10.1",
     "grunt": "^0.4.5",
     "grunt-cli": "^0.1.13",
+    "grunt-coffeelint": "0.0.13",
     "grunt-contrib-jshint": "^0.10.0",
     "grunt-mocha-test": "^0.11.0",
     "nock": "~1.4.0",

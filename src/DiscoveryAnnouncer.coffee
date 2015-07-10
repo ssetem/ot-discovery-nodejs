@@ -1,11 +1,10 @@
-Promise = require "bluebird"
-Errors = require "./Errors"
+Promise        = require "bluebird"
+Errors         = require "./Errors"
 RequestPromise = require "./RequestPromise"
-Utils = require "./Utils"
-_ = require "lodash"
+Utils          = require "./Utils"
+_              = require "lodash"
 
 module.exports = class DiscoveryAnnouncer
-
 
   constructor:(@discoveryClient)->
     @announcements = {}
@@ -23,7 +22,6 @@ module.exports = class DiscoveryAnnouncer
       @INITIAL_BACKOFF
     ).nodeify(callback)
 
-
   removeAnnouncement:(announcement)->
     delete @announcements[announcement.announcementId]
 
@@ -33,7 +31,8 @@ module.exports = class DiscoveryAnnouncer
 
     unless @server
       @discoveryClient.reconnect()
-      return @discoveryClient.notifyAndReject(new Error("Cannot announce. No discovery servers available"))
+      return @discoveryClient.notifyAndReject(
+        new Error("Cannot announce. No discovery servers available"))
 
     @discoveryClient.log "debug", "Announcing " + JSON.stringify(announcement)
     url = @server + "/announcement"
@@ -51,7 +50,8 @@ module.exports = class DiscoveryAnnouncer
 
   handleResponse:(response)=>
     unless response?.statusCode is 201
-      return @discoveryClient.notifyAndReject(new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
+      return @discoveryClient.notifyAndReject(
+        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
     announcement = response.body
     @discoveryClient.log(
       "info", "Announced as " + JSON.stringify(announcement))
@@ -66,7 +66,8 @@ module.exports = class DiscoveryAnnouncer
     @server = @discoveryClient.serverList.getRandom()
     @removeAnnouncement(announcement)
     unless @server
-      return @discoveryClient.notifyAndReject(new Error("Cannot unannounce. No discovery servers available"))
+      return @discoveryClient.notifyAndReject(
+        new Error("Cannot unannounce. No discovery servers available"))
 
     url = "#{@server}/announcement/#{announcement.announcementId}"
     RequestPromise({

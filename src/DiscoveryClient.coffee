@@ -1,16 +1,17 @@
-DiscoveryConnector = require "./DiscoveryConnector"
-AnnouncementIndex = require "./AnnouncementIndex"
-DiscoveryAnnouncer = require "./DiscoveryAnnouncer"
+DiscoveryConnector  = require "./DiscoveryConnector"
+AnnouncementIndex   = require "./AnnouncementIndex"
+DiscoveryAnnouncer  = require "./DiscoveryAnnouncer"
 DiscoveryLongPoller = require "./DiscoveryLongPoller"
-ServerList = require "./ServerList"
-Utils = require "./Utils"
-Promise = require "bluebird"
+ServerList          = require "./ServerList"
+Utils               = require "./Utils"
+Promise             = require "bluebird"
+ConsoleLogger       = require "./ConsoleLogger"
 
 class DiscoveryClient
 
   constructor:(@host, @options)->
 
-    @logger = @options?.logger or require "ot-logger"
+    @logger = @options?.logger or @getAlternativeLogger()
     @announcementIndex = new AnnouncementIndex(@)
     @serverList = new ServerList(@)
     @discoveryConnector = new DiscoveryConnector(@)
@@ -23,6 +24,13 @@ class DiscoveryClient
       @logger.log.bind(@logger, "debug", "Discovery update: ")
     ]
 
+
+  getAlternativeLogger:()->
+    try
+      return require("ot-logger")
+     catch e
+      return ConsoleLogger
+
   connect:(callback)->
     @discoveryConnector.connect()
       .then(@saveUpdates)
@@ -33,7 +41,7 @@ class DiscoveryClient
           return callback null, @host, @serverList.servers
         else
           @servers
-      .catch (e)=>
+      .catch (e)->
         if callback
           return callback(e)
         else

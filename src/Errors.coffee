@@ -13,7 +13,6 @@ class DiscoveryFullUpdateError extends DiscoveryError
     @messagePrefix = "Expecting a full update: "
     super
 
-
 module.exports = {
   DiscoveryError
   DiscoveryConnectError

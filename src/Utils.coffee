@@ -1,13 +1,11 @@
 Promise = require "bluebird"
-uuid = require "node-uuid"
-
+uuid    = require "node-uuid"
 
 class Utils
 
-
   promiseRetry:(fn, times=Infinity, backoff=500)->
     self = this
-    fn().catch (e)=>
+    fn().catch (e)->
       if times is 0
         Promise.reject(e)
       else

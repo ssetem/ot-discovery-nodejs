@@ -1,7 +1,5 @@
 _ = require "lodash"
 
-
-
 class ServerList
 
   constructor:(@discoveryClient)->
@@ -20,7 +18,6 @@ class ServerList
   dropServer:(server)->
     @discoveryClient.log('info', 'Dropping discovery server ' + server)
     @servers = _.without(@servers, server)
-
 
 
 module.exports = ServerList

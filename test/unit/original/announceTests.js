@@ -1,7 +1,5 @@
 var assert = require('assert');
 var nock = require('nock');
-var discovery = require('./../splitup/discovery.js');
-// var discovery = require('./../discovery.js');
 var constants = require('./testConstants.js');
 var fullUpdate;
 var noUpdate;
@@ -78,7 +76,7 @@ describe('# announce tests', function(){
   });
 
     it('should announce calling /announce endpoint', function (done) {
-      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST);
 
       disco.connect(function(error, host, servers) {
         fullUpdate.done();

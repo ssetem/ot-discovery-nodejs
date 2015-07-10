@@ -1,10 +1,9 @@
-Promise = require "bluebird"
-Errors = require "./Errors"
+Promise        = require "bluebird"
+Errors         = require "./Errors"
 RequestPromise = require "./RequestPromise"
-Utils = require "./Utils"
+Utils          = require "./Utils"
 
 class DiscoveryLongPoller
-
 
   constructor:(@discoveryClient)->
 

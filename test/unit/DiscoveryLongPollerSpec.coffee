@@ -1,7 +1,7 @@
 DiscoveryClient = require("#{srcDir}/DiscoveryClient")
-Utils = require("#{srcDir}/Utils")
-nock = require "nock"
-_ = require "lodash"
+Utils           = require("#{srcDir}/Utils")
+nock            = require "nock"
+_               = require "lodash"
 
 describe "DiscoveryLongPoller", ->
 

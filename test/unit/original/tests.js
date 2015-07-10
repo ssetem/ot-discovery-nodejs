@@ -1,7 +1,5 @@
 describe('discovery', function(){
   var nock = require("nock");
-  var discovery = require("../discovery");
-  var discovery = require('./../splitup/discovery.js');
   var should = require("should");
   var disco, host, servers;
 

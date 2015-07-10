@@ -3,12 +3,10 @@ _ = require "lodash"
 
 class AnnouncementIndex
 
-
   constructor:(@discoveryClient)->
     @announcements = {}
     @discoveryServers = []
     @index = -1
-
 
   processUpdate:(update, shouldNotify)->
     if update.fullUpdate
@@ -23,7 +21,6 @@ class AnnouncementIndex
 
   removeAnnouncements:(ids=[])->
     @announcements = _.omit(@announcements, ids)
-
 
   addAnnouncements:(announcements=[])->
     @announcements = _.extend(
@@ -45,7 +42,6 @@ class AnnouncementIndex
 
   getDiscoveryServers:()->
     @discoveryServers
-
 
   serviceTypePredicate:(serviceType)-> (announcement)->
     serviceType in [

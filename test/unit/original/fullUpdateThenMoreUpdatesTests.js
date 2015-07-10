@@ -1,8 +1,5 @@
 var assert = require("assert");
 var nock = require('nock');
-// var discovery = require('./../discovery.js');
-var discovery = require('./../splitup/discovery.js');
-
 var constants = require('./testConstants.js');
 var utils = require('./testUtils.js');
 var fullUpdate;
