@@ -31,9 +31,6 @@
     "should": "^4.0.4",
     "sinon": "^1.15.4"
   },
-  "optionalDependencies": {
-    "ot-logger": "^0.2.0"
-  },
   "bugs": {
     "url": "https://github.com/opentable/ot-discovery-nodejs/issues"
   },

@@ -10,7 +10,7 @@ class DiscoveryClient
 
   constructor:(@host, @options)->
 
-    @logger = @options?.logger or @getAlternativeLogger()
+    @logger = @options?.logger or require "./ConsoleLogger"
     @announcementIndex = new AnnouncementIndex(@)
     @serverList = new ServerList(@)
     @discoveryConnector = new DiscoveryConnector(@)
@@ -22,13 +22,6 @@ class DiscoveryClient
     @watchers = [
       @logger.log.bind(@logger, "debug", "Discovery update: ")
     ]
-
-
-  getAlternativeLogger:()->
-    try
-      return require("ot-logger")
-     catch e
-      return require "./ConsoleLogger"
 
   connect:(callback)->
     @discoveryConnector.connect()
