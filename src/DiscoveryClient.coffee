@@ -5,7 +5,6 @@ DiscoveryLongPoller = require "./DiscoveryLongPoller"
 ServerList          = require "./ServerList"
 Utils               = require "./Utils"
 Promise             = require "bluebird"
-ConsoleLogger       = require "./ConsoleLogger"
 
 class DiscoveryClient
 
@@ -29,7 +28,7 @@ class DiscoveryClient
     try
       return require("ot-logger")
      catch e
-      return ConsoleLogger
+      return require "./ConsoleLogger"
 
   connect:(callback)->
     @discoveryConnector.connect()
