@@ -9,7 +9,6 @@ Promise             = require "bluebird"
 class DiscoveryClient
 
   constructor:(@host, @options)->
-
     @logger = @options?.logger or require "./ConsoleLogger"
     @announcementIndex = new AnnouncementIndex(@)
     @serverList = new ServerList(@)

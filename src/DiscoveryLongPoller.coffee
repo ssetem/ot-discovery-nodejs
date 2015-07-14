@@ -2,6 +2,7 @@ Promise        = require "bluebird"
 Errors         = require "./Errors"
 RequestPromise = require "./RequestPromise"
 Utils          = require "./Utils"
+request        = require "request"
 
 class DiscoveryLongPoller
 
@@ -14,6 +15,7 @@ class DiscoveryLongPoller
 
   stopPolling:()->
     @shouldBePolling = false
+    if @_currentRequest then @_currentRequest.abort()
 
   schedulePoll:()=>
     return unless @shouldBePolling
@@ -26,9 +28,12 @@ class DiscoveryLongPoller
     @server = @discoveryClient.serverList.getRandom()
     @nextIndex = @discoveryClient.announcementIndex.index + 1
     url = "#{@server}/watch?since=#{@nextIndex}"
-    RequestPromise(url:url, json:true)
-      .catch(@handleError)
-      .then(@handleResponse)
+    @_currentRequest = request {url:url, json:true}, (error, response, body)=>
+      if error
+        @handleError(error)
+      else
+        @handleResponse response
+      @_currentRequest = null
 
   handleError:(error)=>
     return unless @shouldBePolling
