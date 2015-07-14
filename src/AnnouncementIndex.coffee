@@ -24,7 +24,7 @@ class AnnouncementIndex
 
   addAnnouncements:(announcements=[])->
     @announcements = _.extend(
-      @announcements
+      @announcements,
       _.indexBy(announcements, "announcementId")
     )
 
