@@ -94,7 +94,7 @@ describe('# announce tests', function(){
     it('should take server out of rotation on announcement failure', function (done) {
       var disco = this.disco = new discovery(constants.DISCOVERY_HOST, constants.DISCOVERY_OPTIONS);
       disco.discoveryAnnouncer.ANNOUNCE_ATTEMPTS=1
-      disco.connect(function(error, host, servers) {
+      disco.reconnect(function(error, host, servers) {
         fullUpdate.done();
         assert.equal(1, disco.getServers().length);
         assert.equal(constants.DISCOVERY_SERVER_URLS[0], disco.getServers()[0]);

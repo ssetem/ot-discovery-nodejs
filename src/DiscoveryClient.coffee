@@ -10,6 +10,8 @@ Promise             = require "bluebird"
 class DiscoveryClient
 
   constructor:(@host, @options)->
+    @HEARTBEAT_INTERVAL_MS = 10 * 1000
+
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier    = new DiscoveryNotifier(@logger)
     @serverList           = new ServerList(@logger)
@@ -31,6 +33,8 @@ class DiscoveryClient
       "find", "findAll"
     ]
 
+
+
   connect:(callback)=>
     @discoveryConnector.connect()
       .then(@saveUpdates)
@@ -47,8 +51,8 @@ class DiscoveryClient
         else
           Promise.reject(e)
 
-  reconnect:()=>
-    @connect()
+  reconnect:(callback)=>
+    @connect(callback)
 
   stopAnnouncementHeartbeat:()=>
     if @heartbeatIntervalId
@@ -56,10 +60,10 @@ class DiscoveryClient
 
   startAnnouncementHeartbeat:()=>
     @stopAnnouncementHeartbeat()
-    heartbeatIntervalMs = 10 * 1000
+
     @heartbeatIntervalId = setInterval(
       @discoveryAnnouncer.pingAllAnnouncements
-      heartbeatIntervalMs
+      @HEARTBEAT_INTERVAL_MS
     )
     return
 
