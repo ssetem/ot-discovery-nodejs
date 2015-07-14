@@ -25,9 +25,6 @@ class DiscoveryClient
       "notifyError", "notifyWatchers"
     ]
 
-    Utils.delegateMethods @, @discoveryAnnouncer, [
-      "announce", "unannounce"
-    ]
 
     Utils.delegateMethods @, @announcementIndex, [
       "find", "findAll"
@@ -66,6 +63,14 @@ class DiscoveryClient
       @HEARTBEAT_INTERVAL_MS
     )
     return
+
+  announce:(announcement, callback)->
+    @discoveryAnnouncer.announce(
+      announcement, callback)
+
+  unannounce:(announcement, callback)->
+    @discoveryAnnouncer.unannounce(
+      announcement, callback)
 
   dispose:()->
     @stopAnnouncementHeartbeat()
