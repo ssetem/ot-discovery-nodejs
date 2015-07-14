@@ -24,7 +24,7 @@ class AnnouncementIndex
 
   addAnnouncements:(announcements=[])->
     @announcements = _.extend(
-      @announcements
+      @announcements,
       _.indexBy(announcements, "announcementId")
     )
 
@@ -43,7 +43,7 @@ class AnnouncementIndex
   getDiscoveryServers:()->
     @discoveryServers
 
-  serviceTypePredicate:(serviceType)-> (announcement)->
+  serviceTypePredicate:(serviceType, announcement)->
     serviceType in [
       announcement.serviceType
       "#{announcement.serviceType}:#{announcement.feature}"
@@ -51,7 +51,7 @@ class AnnouncementIndex
 
   findAll:(predicate)->
     unless _.isFunction(predicate)
-      predicate = @serviceTypePredicate(predicate)
+      predicate = @serviceTypePredicate.bind(@, predicate)
 
     _.chain(@announcements)
       .filter(predicate)
