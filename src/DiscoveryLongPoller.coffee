@@ -6,7 +6,7 @@ request        = require "request"
 
 class DiscoveryLongPoller
 
-  constructor:(@discoveryClient)->
+  constructor:(@serverList, @announcementIndex, @discoveryNotifier, @reconnect)->
 
   startPolling:()=>
     return if @shouldBePolling
@@ -15,31 +15,31 @@ class DiscoveryLongPoller
 
   stopPolling:()->
     @shouldBePolling = false
-    if @_currentRequest then @_currentRequest.abort()
+    @currentRequest?.abort()
 
   schedulePoll:()=>
     return unless @shouldBePolling
-    if @discoveryClient.serverList.isEmpty()
-      @discoveryClient.reconnect()
+    if @serverList.isEmpty()
+      @reconnect()
     else
       @poll()
 
   poll:()=>
-    @server = @discoveryClient.serverList.getRandom()
-    @nextIndex = @discoveryClient.announcementIndex.index + 1
+    @server = @serverList.getRandom()
+    @nextIndex = @announcementIndex.index + 1
     url = "#{@server}/watch?since=#{@nextIndex}"
-    @_currentRequest = request {url:url, json:true}, (error, response, body)=>
+    @currentRequest = request {url:url, json:true}, (error, response, body)=>
       if error
-        @handleError(error)
+        @handleError error
       else
         @handleResponse response
-      @_currentRequest = null
+      @schedulePoll()
+      @currentRequest = null
 
   handleError:(error)=>
     return unless @shouldBePolling
-    @discoveryClient.serverList.dropServer(@server)
-    @discoveryClient.notifyError(error)
-    @schedulePoll()
+    @serverList.dropServer(@server)
+    @discoveryNotifier.notifyError(error)
 
   handleResponse:(response)=>
     return unless @shouldBePolling
@@ -47,15 +47,13 @@ class DiscoveryLongPoller
     unless response?.statusCode
       @handleError(new Error("Could not connect to #{@server}"))
     else if response.statusCode is 204
-      @schedulePoll()
+      return
     #bad status code
     else if response.statusCode isnt 200
       error = new Error("Bad status code " + response.statusCode + " from watch: " + response)
-      @discoveryClient.serverList.dropServer(@server)
-      @discoveryClient.notifyError(error)
-      @schedulePoll()
+      @handleError(error)
     else
-      @discoveryClient.announcementIndex.processUpdate(response.body, true)
-      @schedulePoll()
+      @announcementIndex.processUpdate(response.body, true)
+
 
 module.exports = DiscoveryLongPoller

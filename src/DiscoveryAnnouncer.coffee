@@ -6,14 +6,18 @@ _              = require "lodash"
 
 module.exports = class DiscoveryAnnouncer
 
-  constructor:(@discoveryClient)->
+  constructor:(@logger, @serverList, @discoveryNotifier, @reconnect)->
     @announcements = {}
     @ANNOUNCE_ATTEMPTS = 20
     @INITIAL_BACKOFF = 500
 
   pingAllAnnouncements:()=>
-    Promise.all(_.map(@announcements, @attemptAnnounce))
-      .catch(@discoveryClient.notifyAndReject)
+    Promise.settle(_.map(@announcements, @attemptAnnounce))
+      .then(Utils.groupPromiseInspections)
+      .then (resultGroups)=>
+        if resultGroups.rejected?.length > 0
+          @logger.log "error", "#{resultGroups.rejected?.length} announcements failed"
+        resultGroups.fulfilled
 
   announce:(announcement, callback)->
     Utils.promiseRetry(
@@ -27,14 +31,14 @@ module.exports = class DiscoveryAnnouncer
 
   attemptAnnounce:(announcement)=>
     announcement.announcementId or= Utils.generateUUID()
-    @server = @discoveryClient.serverList.getRandom()
+    @server = @serverList.getRandom()
 
     unless @server
-      @discoveryClient.reconnect()
-      return @discoveryClient.notifyAndReject(
+      @reconnect()
+      return @discoveryNotifier.notifyAndReject(
         new Error("Cannot announce. No discovery servers available"))
 
-    @discoveryClient.log "debug", "Announcing " + JSON.stringify(announcement)
+    @logger.log "debug", "Announcing " + JSON.stringify(announcement)
     url = @server + "/announcement"
     RequestPromise({
       url:url
@@ -45,15 +49,15 @@ module.exports = class DiscoveryAnnouncer
 
 
   handleError:(error)=>
-    @discoveryClient.serverList.dropServer(@server)
-    @discoveryClient.notifyAndReject(error)
+    @serverList.dropServer(@server)
+    @discoveryNotifier.notifyAndReject(error)
 
   handleResponse:(response)=>
     unless response?.statusCode is 201
-      return @discoveryClient.notifyAndReject(
+      return @discoveryNotifier.notifyAndReject(
         new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
     announcement = response.body
-    @discoveryClient.log(
+    @logger.log(
       "info", "Announced as " + JSON.stringify(announcement))
     @announcements[announcement.announcementId] = announcement
     return announcement
@@ -63,10 +67,10 @@ module.exports = class DiscoveryAnnouncer
       .nodeify(callback)
 
   attemptUnannounce:(announcement)=>
-    @server = @discoveryClient.serverList.getRandom()
+    @server = @serverList.getRandom()
     @removeAnnouncement(announcement)
     unless @server
-      return @discoveryClient.notifyAndReject(
+      return @discoveryNotifier.notifyAndReject(
         new Error("Cannot unannounce. No discovery servers available"))
 
     url = "#{@server}/announcement/#{announcement.announcementId}"
@@ -74,6 +78,6 @@ module.exports = class DiscoveryAnnouncer
       url:url
       method:"DELETE"
     }).then( (response)=>
-      @discoveryClient.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
-    ).catch(@discoveryClient.notifyAndReject)
+      @logger.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
+    ).catch(@discoveryNotifier.notifyAndReject)
 

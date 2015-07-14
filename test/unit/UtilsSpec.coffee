@@ -46,3 +46,35 @@ describe "Utils", ->
     Utils.invokeAll(fns, "a", "b")
 
     expect(str).to.equal "abab"
+
+
+  it "delegateMethods", ->
+    delegate = {
+      foo:(@fooArgs...)=>
+    }
+
+    target = {
+
+    }
+    Utils.delegateMethods(target, delegate, ["foo"])
+    target.foo(1,2,3)
+    expect(@fooArgs).to.deep.equal [1,2,3]
+
+  it "groupPromiseInspections()", (done)->
+    promises = [
+      Promise.resolve(1)
+      Promise.resolve(2)
+      Promise.reject(3)
+      Promise.reject(4)
+    ]
+    Promise.settle(promises).then(Utils.groupPromiseInspections)
+      .then (groups)->
+        expect(groups).to.deep.equal {
+          fulfilled: [ 1, 2 ],
+          rejected: [ 3, 4 ]
+        }
+        done()
+
+
+
+

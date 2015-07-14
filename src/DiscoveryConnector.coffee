@@ -5,8 +5,7 @@ Utils          = require "./Utils"
 
 class DiscoveryConnector
 
-  constructor:(@discoveryClient)->
-    @host = @discoveryClient.host
+  constructor:(@host, @logger, @discoveryNotifier)->
     @CONNECT_ATTEMPTS = 100
     @INITIAL_BACKOFF = 500
 
@@ -22,24 +21,24 @@ class DiscoveryConnector
 
   attemptConnect:()=>
     url = @connectUrl()
-    @discoveryClient.log("debug", "Attempting connection to #{url}")
+    @logger.log("debug", "Attempting connection to #{url}")
 
     RequestPromise(url:url, json:true)
-      .catch(@discoveryClient.notifyAndReject)
+      .catch(@discoveryNotifier.notifyAndReject)
       .then(@handle)
 
   handle:(response)=>
     if response.statusCode != 200
-      return @discoveryClient.notifyAndReject(
+      return @discoveryNotifier.notifyAndReject(
         new Errors.DiscoveryConnectError(response.body))
 
     update = response.body
 
     unless update?.fullUpdate
-      return @discoveryClient.notifyAndReject(
+      return @discoveryNotifier.notifyAndReject(
         new Errors.DiscoveryFullUpdateError(update))
 
-    @discoveryClient.log 'debug', 'Discovery update: ' + JSON.stringify(update)
+    @logger.log 'debug', 'Discovery update: ' + JSON.stringify(update)
 
     return update
 
