@@ -35,7 +35,7 @@ class Utils
         acc.rejected.push(inspection.reason())
       acc
 
-     _.reduce(
+    _.reduce(
       inspections,
       reducer,
       {fulfilled:[], rejected:[]}
