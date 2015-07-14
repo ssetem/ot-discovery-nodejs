@@ -1,6 +1,10 @@
 var discovery = require('./discovery');
 var terminalArg = process.argv[2];
-var disco = new discovery(terminalArg || "discovery-proxy.proxy.mesos-vpcqa.otenv.com");
+if(!terminalArg) {
+  console.error("Please specify discovery server, e.g. node demo.js <discovery server url>");
+  return;
+}
+var disco = new discovery(terminalArg);
 disco.onError(function(error) {
   console.warn(error);
 });
