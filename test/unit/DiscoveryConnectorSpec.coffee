@@ -6,8 +6,8 @@ _ = require "lodash"
 describe "DiscoveryConnector", ->
 
   beforeEach ->
-    nock.cleanAll();
-    nock.disableNetConnect();
+    nock.cleanAll()
+    nock.disableNetConnect()
     @discoveryClient = new DiscoveryClient("discovery.com", {
       logger:
         logs:[]

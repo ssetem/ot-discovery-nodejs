@@ -4,8 +4,8 @@ nock = require "nock"
 describe "DiscoveryAnnouncer", ->
 
   beforeEach ->
-    nock.cleanAll();
-    nock.disableNetConnect();
+    nock.cleanAll()
+    nock.disableNetConnect()
     @discoveryClient = new DiscoveryClient("discovery.com", {
       logger:
         logs:[]
