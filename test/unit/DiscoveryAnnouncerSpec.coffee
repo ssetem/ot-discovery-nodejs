@@ -9,9 +9,11 @@ describe "DiscoveryAnnouncer", ->
     @discoveryClient = new DiscoveryClient("discovery.com", {
       logger:
         logs:[]
-        log:()->
+        log:(args...)->
           # console.log arguments
-          @logs.push(arguments)
+          args = args.map (arg)->
+            arg.toString()
+          @logs.push(args)
     })
     @logger = @discoveryClient.logger
     @announcer = @discoveryClient.discoveryAnnouncer
@@ -132,11 +134,21 @@ describe "DiscoveryAnnouncer", ->
           .post('/announcement', @a2)
           .reply(400,"Announce error")
 
-      @announcer.pingAllAnnouncements().catch (e)->
+      @announcer.pingAllAnnouncements().then ()=>
         a1Request.done()
         a2Request.done()
-        expect(e.message).to.equal(
-          'During announce, bad status code 400:"Announce error"')
+        expect(@logger.logs).to.deep.equal [
+          [ 'debug',
+            'Announcing {"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080"}' ],
+          [ 'debug',
+            'Announcing {"announcementId":"a2","serviceType":"my-new-service","serviceUri":"http://my-new-service2:8080"}' ],
+          [ 'error',
+            'Discovery error: ',
+            'Error: During announce, bad status code 400:"Announce error"' ],
+          [ 'error',
+            'Discovery error: ',
+            'Error: During announce, bad status code 400:"Announce error"' ],
+          [ 'error', '2 announcements failed' ] ]
         done()
 
 

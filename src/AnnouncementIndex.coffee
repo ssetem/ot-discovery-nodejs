@@ -3,7 +3,7 @@ _ = require "lodash"
 
 class AnnouncementIndex
 
-  constructor:(@discoveryClient)->
+  constructor:(@serverList, @discoveryNotifier)->
     @announcements = {}
     @discoveryServers = []
     @index = -1
@@ -17,7 +17,7 @@ class AnnouncementIndex
     @addAnnouncements(update.updates)
     @computeDiscoveryServers()
     if shouldNotify
-      @discoveryClient.notifyWatchers(update)
+      @discoveryNotifier.notifyWatchers(update)
 
   removeAnnouncements:(ids=[])->
     @announcements = _.omit(@announcements, ids)
@@ -38,7 +38,7 @@ class AnnouncementIndex
       .where({serviceType:"discovery"})
       .pluck("serviceUri")
       .value()
-    @discoveryClient.serverList.addServers(@discoveryServers)
+    @serverList.addServers(@discoveryServers)
 
   getDiscoveryServers:()->
     @discoveryServers

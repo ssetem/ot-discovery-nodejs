@@ -1,6 +1,7 @@
 DiscoveryConnector  = require "./DiscoveryConnector"
 AnnouncementIndex   = require "./AnnouncementIndex"
 DiscoveryAnnouncer  = require "./DiscoveryAnnouncer"
+DiscoveryNotifier   = require "./DiscoveryNotifier"
 DiscoveryLongPoller = require "./DiscoveryLongPoller"
 ServerList          = require "./ServerList"
 Utils               = require "./Utils"
@@ -10,19 +11,27 @@ class DiscoveryClient
 
   constructor:(@host, @options)->
     @logger = @options?.logger or require "./ConsoleLogger"
-    @announcementIndex = new AnnouncementIndex(@)
-    @serverList = new ServerList(@)
-    @discoveryConnector = new DiscoveryConnector(@)
-    @discoveryLongPoller = new DiscoveryLongPoller(@)
-    @discoveryAnnouncer = new DiscoveryAnnouncer(@)
-    @errorHandlers = [
-      @logger.log.bind(@logger, "error", "Discovery error: ")
-    ]
-    @watchers = [
-      @logger.log.bind(@logger, "debug", "Discovery update: ")
+    @discoveryNotifier    = new DiscoveryNotifier(@logger)
+    @serverList           = new ServerList(@logger)
+    @announcementIndex    = new AnnouncementIndex(@serverList, @discoveryNotifier)
+    @discoveryConnector   = new DiscoveryConnector(@host, @logger, @discoveryNotifier)
+    @discoveryLongPoller  = new DiscoveryLongPoller(@serverList, @announcementIndex, @discoveryNotifier, @reconnect)
+    @discoveryAnnouncer   = new DiscoveryAnnouncer(@logger, @serverList, @discoveryNotifier, @reconnect)
+
+    Utils.delegateMethods @,  @discoveryNotifier, [
+      "log", "onUpdate", "onError", "notifyAndReject"
+      "notifyError", "notifyWatchers"
     ]
 
-  connect:(callback)->
+    Utils.delegateMethods @, @discoveryAnnouncer, [
+      "announce", "unannounce"
+    ]
+
+    Utils.delegateMethods @, @announcementIndex, [
+      "find", "findAll"
+    ]
+
+  connect:(callback)=>
     @discoveryConnector.connect()
       .then(@saveUpdates)
       .then(@longPollForUpdates)
@@ -38,6 +47,9 @@ class DiscoveryClient
         else
           Promise.reject(e)
 
+  reconnect:()=>
+    @connect()
+
   stopAnnouncementHeartbeat:()=>
     if @heartbeatIntervalId
       clearInterval(@heartbeatIntervalId)
@@ -51,15 +63,9 @@ class DiscoveryClient
     )
     return
 
-  reconnect:()->
-    @connect()
-
   dispose:()->
     @stopAnnouncementHeartbeat()
     @discoveryLongPoller.stopPolling()
-
-  getHostAndServers:()=>
-    [@host, @serverList.servers]
 
   saveUpdates:(update)=>
     @announcementIndex.processUpdate(update)
@@ -74,37 +80,5 @@ class DiscoveryClient
   getAnnouncements:()->
     @announcementIndex.announcements
 
-  announce:(announcement, callback)->
-    @discoveryAnnouncer.announce(
-      announcement, callback)
-
-  unannounce:(announcement, callback)->
-    @discoveryAnnouncer.unannounce(
-      announcement, callback)
-
-  find:(predicate)->
-    @announcementIndex.find(predicate)
-
-  findAll:(predicate)->
-    @announcementIndex.findAll(predicate)
-
-  notifyError:(error)->
-    Utils.invokeAll(@errorHandlers, error)
-
-  notifyWatchers:(body)->
-    Utils.invokeAll(@watchers, body)
-
-  onUpdate:(fn)->
-    @watchers.push(fn)
-
-  onError:(fn)->
-    @errorHandlers.push(fn)
-
-  log:(args...)->
-    @logger.log.apply(@logger, args)
-
-  notifyAndReject:(error)=>
-    @notifyError(error)
-    return Promise.reject(error)
 
 module.exports = DiscoveryClient

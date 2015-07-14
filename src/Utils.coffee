@@ -1,5 +1,6 @@
 Promise = require "bluebird"
 uuid    = require "node-uuid"
+_       = require "lodash"
 
 class Utils
 
@@ -20,5 +21,25 @@ class Utils
 
   generateUUID:()->
     uuid.v4()
+
+  delegateMethods:(target, delegate, methods)->
+    for method in methods
+      do (method)->
+        target[method] = (args...)->
+          delegate[method].apply(delegate, args)
+
+  groupPromiseInspections:(inspections)->
+    reducer = (acc, inspection)->
+      if inspection.isFulfilled()
+        acc.fulfilled.push(inspection.value())
+      else if inspection.isRejected()
+        acc.rejected.push(inspection.reason())
+      acc
+
+     _.reduce(
+      inspections,
+      reducer
+      {fulfilled:[], rejected:[]}
+    )
 
 module.exports = new Utils
