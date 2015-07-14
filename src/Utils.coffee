@@ -37,7 +37,7 @@ class Utils
 
      _.reduce(
       inspections,
-      reducer
+      reducer,
       {fulfilled:[], rejected:[]}
     )
 
