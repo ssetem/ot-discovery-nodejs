@@ -31,6 +31,9 @@
     "should": "^4.0.4",
     "sinon": "^1.15.4"
   },
+  "bin":{
+    "discovery-cli":"bin/discovery-cli.js"
+  },
   "bugs": {
     "url": "https://github.com/opentable/ot-discovery-nodejs/issues"
   },
