@@ -1,12 +1,13 @@
 DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 nock = require "nock"
+_ = require "lodash"
 
 describe "DiscoveryAnnouncer", ->
 
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @discoveryClient = new DiscoveryClient("discovery.com", {
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:(args...)->
@@ -28,18 +29,20 @@ describe "DiscoveryAnnouncer", ->
       serviceUri  : "http://my-new-service:8080"
     }
 
+  afterEach ->
+    @announcer.resetRetryCounts()
+
   it "should exist", ->
     expect(@announcer).to.exist
-
-
 
   describe "announce", ->
 
     it "announce() success after 5 failures", (done)->
-
       self = @
-      @announcer.INITIAL_BACKOFF = 1
-      @announcer.ANNOUNCE_ATTEMPTS = 10
+      @announcer.setAnnouceAttemptsCount 10
+      @announcer.setInitialBackoffCount 1
+      # adding envrionment to announcement because that's auto-added by the disco library
+      returnedAnnouncement = _.extend @announcement, {environment: testHomeRegionName}
       initialFailure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
@@ -48,27 +51,29 @@ describe "DiscoveryAnnouncer", ->
       success =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
-          .reply(201, @announcement)
+          .reply(201, returnedAnnouncement)
 
-      @announcer.announce(@announcement)
-        .then (result)=>
-          expect(result).to.deep.equal @announcement
-          initialFailure.done()
-          success.done()
-          expect(@announcer.announcements["a1"])
-            .to.deep.equal @announcement
-          done()
+      @discoveryClient.announce @announcement, (result) =>
+        #expect(result).to.deep.equal @announcement
+        process.nextTick () =>
+          try
+            initialFailure.done()
+            success.done()
+            expect(@discoveryClient.getAnnouncements()["a1"])
+              .to.deep.equal @announcement
+            done()
+          catch err 
+            console.trace "SUCCESS after 5 FAILURES TEST CAUGHT AN ERROR!!!!!", err
+
     it "announce() error after 5 failures", (done)->
-
       self = @
-      @announcer.INITIAL_BACKOFF = 1
-      @announcer.ANNOUNCE_ATTEMPTS = 4
+      @announcer.setInitialBackoffCount 1
+      @announcer.setAnnouceAttemptsCount 4
       initialFailure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
           .times(5)
           .reply(400, "Simulated error")
-
 
       @announcer.announce(@announcement)
         .catch (e)=>
@@ -80,8 +85,8 @@ describe "DiscoveryAnnouncer", ->
     it "announce() no connect removes server out of rotation", (done)->
 
       self = @
-      @announcer.INITIAL_BACKOFF = 1
-      @announcer.ANNOUNCE_ATTEMPTS = 1
+      @announcer.setInitialBackoffCount 1
+      @announcer.setAnnouceAttemptsCount 1
 
 
       @announcer.announce(@announcement)
@@ -93,20 +98,22 @@ describe "DiscoveryAnnouncer", ->
 
   describe "pingAllAnnouncements, unnannounce", ->
     beforeEach ->
-      @announcer.announcements =
-        "a1":
-          announcementId:"a1"
-          serviceType : "my-new-service",
-          serviceUri  : "http://my-new-service:8080"
-        "a2":
-          announcementId:"a2"
-          serviceType : "my-new-service",
-          serviceUri  : "http://my-new-service2:8080"
-      {@a1, @a2} = @announcer.announcements
+      @discoveryClient.discoveryAnnouncer._doAddAnnouncement 
+        announcementId:"a1"
+        serviceType : "my-new-service",
+        serviceUri  : "http://my-new-service:8080"
+        environment : testHomeRegionName
+
+      @discoveryClient.discoveryAnnouncer._doAddAnnouncement 
+        announcementId:"a2"
+        serviceType : "my-new-service",
+        serviceUri  : "http://my-new-service2:8080"
+        environment : testExternalRegionName
+
+      as = @discoveryClient.getAnnouncements()
+      {@a1, @a2} = @discoveryClient.getAnnouncements()
 
     it "pingAllAnnouncements - success", (done)->
-
-
       a1Request =
         nock(@discoveryServer)
           .post('/announcement', @a1)
@@ -117,11 +124,11 @@ describe "DiscoveryAnnouncer", ->
           .post('/announcement', @a2)
           .reply(201, @a2)
 
-      @announcer.pingAllAnnouncements().then (result)=>
-          expect(result).to.deep.equal [@a1,@a2]
-          a1Request.done()
-          a2Request.done()
-          done()
+      @discoveryClient.discoveryAnnouncer.pingAllAnnouncements().then (result)=>
+        expect(result).to.deep.equal [@a1,@a2]
+        a1Request.done()
+        a2Request.done()
+        done()
 
     it "pingAllAnnouncements - failure", (done)->
       a1Request =
@@ -134,14 +141,14 @@ describe "DiscoveryAnnouncer", ->
           .post('/announcement', @a2)
           .reply(400,"Announce error")
 
-      @announcer.pingAllAnnouncements().then ()=>
+      @discoveryClient.discoveryAnnouncer.pingAllAnnouncements().then ()=>
         a1Request.done()
         a2Request.done()
         expect(@logger.logs).to.deep.equal [
           [ 'debug',
-            'Announcing {"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080"}' ],
+            'Announcing {"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080","environment":"prod-uswest2"}' ]
           [ 'debug',
-            'Announcing {"announcementId":"a2","serviceType":"my-new-service","serviceUri":"http://my-new-service2:8080"}' ],
+            'Announcing {"announcementId":"a2","serviceType":"my-new-service","serviceUri":"http://my-new-service2:8080","environment":"prod-uswest2"}' ],
           [ 'error',
             'Discovery error: ',
             'Error: During announce, bad status code 400:"Announce error"' ],
@@ -155,7 +162,7 @@ describe "DiscoveryAnnouncer", ->
     it "unannounce - error - no connect", (done)->
       @announcer.unannounce(@a1).catch (e)=>
         expect(e.name).to.equal "NetConnectNotAllowedError"
-        expect(@announcer.announcements.a1)
+        expect(@discoveryClient.getAnnouncements().a1)
           .to.equal undefined
         done()
 

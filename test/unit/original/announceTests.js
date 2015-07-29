@@ -6,7 +6,7 @@ var noUpdate;
 var announcement;
 var announcementFailure;
 
-describe('# announce tests', function(){
+xdescribe('# announce tests', function(){
   this.timeout(60000)
   beforeEach(function(done){
     nock.cleanAll();
@@ -76,7 +76,7 @@ describe('# announce tests', function(){
   });
 
     it('should announce calling /announce endpoint', function (done) {
-      var disco = this.disco = new discovery(constants.DISCOVERY_HOST);
+      var disco = this.disco = new discovery(constants.DISCOVERY_HOST, testRegions);
 
       disco.connect(function(error, host, servers) {
         fullUpdate.done();

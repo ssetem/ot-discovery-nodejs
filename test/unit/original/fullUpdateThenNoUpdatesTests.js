@@ -4,7 +4,7 @@ var constants = require('./testConstants.js');
 var fullUpdate;
 var noUpdate;
 
-describe('# full update followed by no updates tests', function(){
+xdescribe('# full update followed by no updates tests', function(){
   beforeEach(function(done){
     nock.cleanAll();
     nock.disableNetConnect();

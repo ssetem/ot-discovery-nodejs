@@ -6,7 +6,7 @@ request        = require "request"
 
 class DiscoveryLongPoller
 
-  constructor:(@serverList, @announcementIndex, @discoveryNotifier, @reconnect)->
+  constructor:(@serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect)->
 
   startPolling:()=>
     return if @shouldBePolling
@@ -24,10 +24,10 @@ class DiscoveryLongPoller
     else
       @poll()
 
-  poll:()=>
+  poll:() =>
     @server = @serverList.getRandom()
     @nextIndex = @announcementIndex.index + 1
-    url = "#{@server}/watch?since=#{@nextIndex}"
+    url = "#{@server}/watch?since=#{@nextIndex}" + @serviceName? "&clientServiceType=#{@serviceName}" : ""
     @currentRequest = request {url:url, json:true}, (error, response, body)=>
       if error
         @handleError error

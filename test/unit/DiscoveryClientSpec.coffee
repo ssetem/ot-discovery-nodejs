@@ -6,7 +6,7 @@ describe "DiscoveryClient", ->
 
   beforeEach ->
     Promise.promisifyAll(DiscoveryClient.prototype)
-    @discoveryClient = new DiscoveryClient("host")
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName)
 
 
   it "should exist", ->

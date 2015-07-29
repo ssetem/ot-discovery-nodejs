@@ -8,7 +8,7 @@ describe "DiscoveryLongPoller", ->
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @discoveryClient = new DiscoveryClient("discovery.com", {
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:()->
@@ -37,16 +37,16 @@ describe "DiscoveryLongPoller", ->
     it "successful poll", (done)->
 
       r1 = nock(@discoveryServer)
-        .get("/watch?since=0")
+        .get("/watch?clientServiceType=#{testServiceName}&since=0")
         .reply(200, {index:0})
       r2 = nock(@discoveryServer)
-        .get("/watch?since=1")
+        .get("/watch?clientServiceType=#{testServiceName}&since=1")
         .reply(200, {index:1})
       r3 = nock(@discoveryServer)
-        .get("/watch?since=2")
+        .get("/watch?clientServiceType=#{testServiceName}&since=2")
         .reply(204)
       r4 = nock(@discoveryServer)
-        .get("/watch?since=2")
+        .get("/watch?clientServiceType=#{testServiceName}&since=2")
         .reply(200, {
           index:100
         })

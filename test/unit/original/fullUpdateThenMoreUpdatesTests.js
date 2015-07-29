@@ -9,7 +9,7 @@ var TOTAL_TEST_TIME = 3000;
 var UPDATE_TIME_DELAY_MS = 2000;
 var ACCEPTABLE_UPDATE_LAG = 50;
 
-describe('# full-update followed by some updates tests', function(){
+xdescribe('# full-update followed by some updates tests', function(){
   beforeEach(function(done){
     nock.cleanAll();
     nock.disableNetConnect();

@@ -8,7 +8,7 @@ describe "DiscoveryConnector", ->
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @discoveryClient = new DiscoveryClient("discovery.com", {
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:()->
@@ -21,7 +21,7 @@ describe "DiscoveryConnector", ->
     @getRetryCalls = =>
       _.pluck(Utils.promiseRetry.getCalls(), "args")
 
-    @discoveryServer = "http://discovery.com"
+    @discoveryServer = "http://" + @discoveryClient.getHostUrl()
 
     @successfulUpdate = {
       "fullUpdate":true,
@@ -63,7 +63,7 @@ describe "DiscoveryConnector", ->
       @connector.connect()
         .catch (e)=>
           expect(e.message).to.equal(
-            'Nock: Not allow net connect for "discovery.com:80/watch"')
+            'Nock: Not allow net connect for "' + @discoveryClient.getHostUrl() + ':80/watch' + "?clientServiceType=#{testServiceName}\"")
           expect([
             [@connector.attemptConnect, 3, 1]
             [@connector.attemptConnect, 2, 2]
@@ -77,23 +77,24 @@ describe "DiscoveryConnector", ->
       @connector.INITIAL_BACKOFF = 1
       failedRequests =
         nock(@discoveryServer)
-          .get('/watch')
+          .get("/watch?clientServiceType=#{testServiceName}")
           .times(2)
           .reply(500, "Simulated server error")
       nonFullUpdateRequests =
         nock(@discoveryServer)
-          .get('/watch')
+          .get("/watch?clientServiceType=#{testServiceName}")
           .times(2)
           .reply(500, {fullUpdate:false})
       successfulRequest =
         nock(@discoveryServer)
-          .get('/watch')
+          .get("/watch?clientServiceType=#{testServiceName}")
           .reply(200, @successfulUpdate)
 
       @errors = []
       @discoveryClient.onError (err)=>
         @errors.push(err)
-      @connector.connect().then (result)=>
+        
+      @connector.connect().then (result) =>
         failedRequests.done()
         nonFullUpdateRequests.done()
         successfulRequest.done()

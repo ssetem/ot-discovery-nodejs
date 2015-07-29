@@ -1,83 +1,116 @@
-Promise        = require "bluebird"
-Errors         = require "./Errors"
+Promise = require "bluebird"
+Errors = require "./Errors"
 RequestPromise = require "./RequestPromise"
-Utils          = require "./Utils"
-_              = require "lodash"
+Utils = require "./Utils"
+ServerList = require "./ServerList"
+_ = require "lodash"
 
 module.exports = class DiscoveryAnnouncer
 
-  constructor:(@logger, @serverList, @discoveryNotifier, @reconnect)->
-    @announcements = {}
-    @ANNOUNCE_ATTEMPTS = 20
-    @INITIAL_BACKOFF = 500
+  constructor: (@logger, @announcementHost, @discoveryNotifier) ->
+    @ANNOUNCED_ATTEMPTS = 20
+    @INITIAL_BACKOFFS = 500
+    @_announcedRecords = {}
+    @HEARTBEAT_INTERVAL_MS = 10 * 1000
 
-  pingAllAnnouncements:()=>
-    Promise.settle(_.map(@announcements, @attemptAnnounce))
+    @serverList = new ServerList @logger
+
+  pingAllAnnouncements: () =>
+    announcements = @getAnnouced()
+    Promise.settle(_.map(announcements, @attemptAnnounce) )
       .then(Utils.groupPromiseInspections)
-      .then (resultGroups)=>
+      .then (resultGroups) =>
         if resultGroups.rejected?.length > 0
           @logger.log "error", "#{resultGroups.rejected?.length} announcements failed"
         resultGroups.fulfilled
 
-  announce:(announcement, callback)->
+  getAnnouced: () =>
+    @_announcedRecords
+
+  announce: (announcement, callback) =>
     Utils.promiseRetry(
       @attemptAnnounce.bind(@, announcement)
-      @ANNOUNCE_ATTEMPTS
-      @INITIAL_BACKOFF
-    ).nodeify(callback)
+      @ANNOUNCED_ATTEMPTS
+      @INITIAL_BACKOFFS
+    )
 
-  removeAnnouncement:(announcement)->
-    delete @announcements[announcement.announcementId]
+  removeAnnouncement: (announcement) =>
+    delete @_announcedRecords[announcement.announcementId]
 
-  attemptAnnounce:(announcement)=>
+  attemptAnnounce: (announcement) =>
     announcement.announcementId or= Utils.generateUUID()
-    @server = @serverList.getRandom()
+    getServer().then (server)=>
+      @logger.log "debug", "Announcing " + JSON.stringify(announcement)
+      url = server + "/announcement"
+      RequestPromise({
+        url: url
+        method: "POST"
+        json: true
+        body: announcement
+      }).catch((error) =>
+        @serverList.dropServer server
+        @discoveryNotifier.notifyAndReject error
+      ).then(@handleResponse)
+    .catch (getServerError) =>
+      @discoveryNotifier.notifyAndReject new Error("Coult not get server from #{@announcementHost}")
 
-    unless @server
-      @reconnect()
-      return @discoveryNotifier.notifyAndReject(
-        new Error("Cannot announce. No discovery servers available"))
-
-    @logger.log "debug", "Announcing " + JSON.stringify(announcement)
-    url = @server + "/announcement"
-    RequestPromise({
-      url:url
-      method:"POST"
-      json:true
-      body:announcement
-    }).catch(@handleError).then(@handleResponse)
-
-
-  handleError:(error)=>
-    @serverList.dropServer(@server)
-    @discoveryNotifier.notifyAndReject(error)
-
-  handleResponse:(response)=>
+  handleResponse: (response) =>
     unless response?.statusCode is 201
       return @discoveryNotifier.notifyAndReject(
-        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}"))
+        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}") )
     announcement = response.body
-    @logger.log(
-      "info", "Announced as " + JSON.stringify(announcement))
-    @announcements[announcement.announcementId] = announcement
+    @logger.log "info", "Announced as ", JSON.stringify(announcement)
+    @_doAddAnnouncement announcement
     return announcement
 
-  unannounce:(announcement, callback)->
-    @attemptUnannounce(announcement)
+  unannounce: (announcementId, callback) ->
+    @attemptUnannounce(announcementId)
       .nodeify(callback)
 
-  attemptUnannounce:(announcement)=>
-    @server = @serverList.getRandom()
-    @removeAnnouncement(announcement)
-    unless @server
-      return @discoveryNotifier.notifyAndReject(
-        new Error("Cannot unannounce. No discovery servers available"))
+  _doAddAnnouncement: (announcement) =>
+    @_announcedRecords[announcement.announcementId] = announcement
 
-    url = "#{@server}/announcement/#{announcement.announcementId}"
-    RequestPromise({
-      url:url
-      method:"DELETE"
-    }).then( (response)=>
-      @logger.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
-    ).catch(@discoveryNotifier.notifyAndReject)
+  getServer: () =>
+    Promise.method () =>
+      server = @serverList.getRandom()
+      if server
+        return server
+      else
+        url = "http://#{@announcementHost}/watch"
+        RequestPromise  
+          url,
+          json:true
+        .then (response) =>
+          @serverList.addServers _.chain(response.updates)
+            .where({serviceType:"discovery"})
+            .pluck("serviceUri")
+            .value()
+          console.log "SERVERLIST AFTER ADDING SERVERS FROM GETSERVER():", @serverList.servers
+          returnedServer = @serverList.getRandom()
+          unless returnedServer
+            console.log "WE DIDNT GET ANY SERVERS, AGAIN, totally owned"
+            throw new Error "We are totally screwed"
+          returnedServer
+
+  attemptUnannounce: (announcement) =>
+    getServer().then (server)=>
+      url = "#{server}/announcement/#{announcement.announcementId}"
+      RequestPromise({
+        url: url
+        method: "DELETE"
+      } ).then (response) =>
+        @removeAnnouncement(announcement)
+        @logger.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
+      .catch (error) =>
+        @serverList.dropServer server
+        @discoveryNotifier.notifyAndReject error
+
+  startAnnouncementHeartbeat: () =>
+    @stopAnnouncementHeartbeat()
+    @_AnnouncementHeartbeatInterval = setInterval @pingAllAnnouncements, @HEARTBEAT_INTERVAL_MS
+
+  stopAnnouncementHeartbeat: () =>
+    if @_AnnouncementHeartbeatInterval
+      clearInterval @_AnnouncementHeartbeatInterval
+    @_AnnouncementHeartbeatInterval = null
 

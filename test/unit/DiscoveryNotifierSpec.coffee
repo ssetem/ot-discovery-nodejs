@@ -4,7 +4,7 @@ DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 describe "AnnouncementIndex", ->
 
   beforeEach ->
-    @discoveryClient = new DiscoveryClient("host", {
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:(args...)->

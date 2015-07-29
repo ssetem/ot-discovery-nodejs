@@ -5,12 +5,12 @@ Utils          = require "./Utils"
 
 class DiscoveryConnector
 
-  constructor:(@host, @logger, @discoveryNotifier)->
+  constructor:(@host,@serviceName, @logger, @discoveryNotifier)->
     @CONNECT_ATTEMPTS = 100
     @INITIAL_BACKOFF = 500
 
   connectUrl:()->
-    "http://#{@host}/watch"
+    "http://#{@host}/watch" + @serviceName? "?clientServiceType=#{@serviceName}" : ""
 
   connect:()->
     Utils.promiseRetry(

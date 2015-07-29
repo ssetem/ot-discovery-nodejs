@@ -5,7 +5,7 @@ DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 describe "ServerList", ->
 
   beforeEach ->
-    @discoveryClient = new DiscoveryClient("host", {
+    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:()->

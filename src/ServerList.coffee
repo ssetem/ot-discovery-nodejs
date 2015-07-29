@@ -2,21 +2,21 @@ _ = require "lodash"
 
 class ServerList
 
-  constructor:(@discoveryClient)->
+  constructor:(@logger)->
     @servers = []
 
   getRandom:()->
     _.sample(@servers)
 
   addServers:(servers=[])->
-    @discoveryClient.log('info', 'Syncing discovery servers ' + servers)
+    @logger.log('info', 'Syncing discovery servers ' + servers)
     @servers = _.uniq(@servers.concat servers)
 
   isEmpty:()->
     @servers.length is 0
 
   dropServer:(server)->
-    @discoveryClient.log('info', 'Dropping discovery server ' + server)
+    @logger.log('info', 'Dropping discovery server ' + server)
     @servers = _.without(@servers, server)
 
 
