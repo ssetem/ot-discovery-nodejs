@@ -34,11 +34,11 @@ class DiscoveryClient
 
       if errmsg
         throw new Error errmsg
-    
+
     if Array.isArray announcementHosts
       @_announcementHosts = announcementHosts
     else
-      @options = (announcementHosts is Object)? announcementHosts : @options
+      @options = if (announcementHosts is Object)? then announcementHosts else @options
       @_announcementHosts = [@host]
 
     @_homeRegionName = homeRegionName || null
@@ -49,8 +49,8 @@ class DiscoveryClient
         throw new Error "announcementHost should not contain http:// - use direct host name"
 
     checkHostName @host
-    _.forEach @announcementHosts, checkHostName
-      
+    _.forEach @_announcementHosts, checkHostName
+
 
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
@@ -99,19 +99,17 @@ class DiscoveryClient
   announce: (announcement, callback) =>
     if @_homeRegionName
       announcement.environment = @_homeRegionName
-    
+
     announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       announcer.announce announcement
     Promise.all(announcedPromises).nodeify(callback)
 
-  #TEST THIS FOR SURE TOR TEST TES TEST TEST TEST
   unannounce: (announcements, callback) =>
-    unnnouncedPromises = _.map @_discoveryAnnouncers, (announcer) ->
-      for ann in announcements
-        if announcer.hasAnnounced ann
-          announcer.unannounce ann
+    unannouncedPromises = _.map _.zip(@_discoveryAnnouncers, announcements),
+      (announcementPair) ->
+        announcementPair[0].unannounce announcementPair[1]
 
-    Promises.all(unnnouncedPromises).nodeify(callback)
+    Promise.all(unannouncedPromises).nodeify(callback)
 
   dispose: () ->
     @stopAnnouncementHeartbeat()

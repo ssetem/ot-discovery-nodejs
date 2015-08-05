@@ -24,9 +24,6 @@ class DiscoveryNotifier
   onError:(fn)->
     @errorHandlers.push(fn)
 
-  log:(args...)->
-    @logger.log.apply(@logger, args)
-
   notifyAndReject:(error)=>
     @notifyError(error)
     return Promise.reject(error)

@@ -10,7 +10,7 @@ describe "DiscoveryConnector", ->
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @host = testHosts.discoverRegionHost
+    @host = "ahost.com"
     @discoveryNotifier =
       notifyAndReject: sinon.spy (err) ->
         Promise.reject err

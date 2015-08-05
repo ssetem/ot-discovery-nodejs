@@ -16,23 +16,19 @@ module.exports = class DiscoveryAnnouncer
     @serverList = new ServerList @logger
 
   pingAllAnnouncements: () =>
-    announcements = @getAnnouced()
-    Promise.settle(_.map(announcements, @attemptAnnounce) )
+    Promise.settle(_.map(@_announcedRecords, @attemptAnnounce) )
       .then(Utils.groupPromiseInspections)
       .then (resultGroups) =>
         if resultGroups.rejected?.length > 0
           @logger.log "error", "#{resultGroups.rejected?.length} announcements failed"
         resultGroups.fulfilled
 
-  getAnnouced: () =>
-    @_announcedRecords
-
-  announce: (announcement, callback) =>
+  announce: (announcement) ->
     Utils.promiseRetry(
       @attemptAnnounce.bind(@, announcement)
       @ANNOUNCED_ATTEMPTS
       @INITIAL_BACKOFFS
-    ).nodeify(callback)
+    )
 
   removeAnnouncement: (announcement) =>
     delete @_announcedRecords[announcement.announcementId]
@@ -66,9 +62,8 @@ module.exports = class DiscoveryAnnouncer
     @_doAddAnnouncement announcement
     return announcement
 
-  unannounce: (announcementId, callback) ->
-    @attemptUnannounce(announcementId)
-      .nodeify(callback)
+  unannounce: (announcement) ->
+    @attemptUnannounce(announcement)
 
   _doAddAnnouncement: (announcement) =>
     @_announcedRecords[announcement.announcementId] = announcement

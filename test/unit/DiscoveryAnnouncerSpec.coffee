@@ -10,16 +10,16 @@ describe "DiscoveryAnnouncer", ->
     nock.disableNetConnect()
     @logger =
       log: sinon.spy()
-      
+
     @discoveryHost = "discover-host"
     @discoveryServer = "http://discover-server"
     @discoveryNotifier =
       notifyAndReject: sinon.spy (err) ->
         return Promise.reject err
-      
+
     @announcer = new DiscoveryAnnouncer(@logger, @discoveryHost, @discoveryNotifier)
     @announcer.INITIAL_BACKOFFS = 1
-        
+
     @discoAnnouncements =
       updates: [
         {
@@ -28,7 +28,7 @@ describe "DiscoveryAnnouncer", ->
           serviceUri  : @discoveryServer
         }
       ]
-      
+
     @announcement = {
       announcementId:"a1"
       serviceType : "my-new-service",
@@ -78,7 +78,7 @@ describe "DiscoveryAnnouncer", ->
         nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
-          
+
       initialFailure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
@@ -93,22 +93,32 @@ describe "DiscoveryAnnouncer", ->
 
     it "all servers removed forces a rewatch", (done) ->
       done()
-      
+
     it "watch fails forces a reattempt", (done) ->
-      done()
-      
+      watch =
+        nock("http://#{@discoveryHost}")
+          .get('/watch')
+          .times(5)
+          .reply(500)
+
+      @announcer.ANNOUNCED_ATTEMPTS = 5
+      @announcer.announce(@announcement)
+        .catch (e) =>
+          expect(e).to.be.ok;
+          done()
+
   describe "pingAllAnnouncements", () ->
     beforeEach ->
       # in this test, we won't test the server list / watch which is tested
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
       @announcer._doAddAnnouncement @announcement
-      @announcement2 = 
+      @announcement2 =
         announcementId: "a2"
         serviceType: "my-other-service"
         serviceUri: "http://my-other-service"
       @announcer._doAddAnnouncement @announcement2
-      
+
     it "pingAllAnnouncements - success", (done)->
       a1Request =
         nock(@discoveryServer)
@@ -147,7 +157,7 @@ describe "DiscoveryAnnouncer", ->
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
       @announcer._doAddAnnouncement @announcement
-    
+
     it "unannounce - error - no connect", (done)->
       @announcer.unannounce(@announcement).catch (e)=>
         expect(e).to.be.ok
@@ -160,4 +170,26 @@ describe "DiscoveryAnnouncer", ->
       @announcer.unannounce(@announcement).then (result)=>
         done()
 
+  describe "heartbeats", () ->
+    before () ->
+      @clock = sinon.useFakeTimers()
 
+    beforeEach () ->
+      @announcer.pingAllAnnouncements = sinon.spy()
+
+    after () ->
+      @clock.restore()
+
+    it "starts heartbeat", () ->
+      @announcer.startAnnouncementHeartbeat()
+      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+      expect(@announcer.pingAllAnnouncements.called).to.be.ok
+      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+      expect(@announcer.pingAllAnnouncements.called).to.be.ok
+
+    it "stops heartbeat", () ->
+      @announcer.stopAnnouncementHeartbeat()
+      @announcer.startAnnouncementHeartbeat()
+      @announcer.stopAnnouncementHeartbeat()
+      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+      expect(@announcer.pingAllAnnouncements.called).to.not.be.ok

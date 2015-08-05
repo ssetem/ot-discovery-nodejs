@@ -1,41 +1,27 @@
-DiscoveryClient = require("#{srcDir}/DiscoveryClient")
+DiscoveryNotifier = require "#{srcDir}/DiscoveryNotifier"
+sinon = require "sinon"
 
-
-describe "AnnouncementIndex", ->
-
+describe "DiscoveryNotifier", ->
   beforeEach ->
-    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
-      logger:
-        logs:[]
-        log:(args...)->
-          @logs.push(args)
-    })
-
-
-    @notifier = @discoveryClient.discoveryNotifier
-    @logger = @discoveryClient.logger
+    @logger =
+      log: sinon.spy()
+    
+    @notifier = new DiscoveryNotifier @logger
 
   it "notifyError, onError", ->
     err = new Error("oh no")
     @notifier.onError (@recievedError)=>
     @notifier.notifyError(err)
-    expect(@logger.logs[0]).to.deep.equal [
-      "error", "Discovery error: ", err
-    ]
+    expect(@logger.log.calledWithMatch("error", "Discovery error: ", err))
+      .to.be.ok
     expect(@recievedError).to.equal err
 
   it "notifyWatchers, onUpdate", ->
     @notifier.onUpdate (@recievedUpdate)=>
     @notifier.notifyWatchers("someUpdate")
-    expect(@logger.logs[0]).to.deep.equal [
-      "debug", "Discovery update: ", "someUpdate"
-    ]
+    expect(@logger.log.calledWithMatch("debug", "Discovery update: ", "someUpdate"))
+      .to.be.ok
     expect(@recievedUpdate).to.equal "someUpdate"
-
-  it "log()", ->
-    @notifier.log "debug", 1, 2, 3
-    expect(@logger.logs[0]).to.deep.equal(
-      ["debug", 1, 2, 3])
 
   it "notifyAndReject()", (done)->
     error = new Error("oops")
