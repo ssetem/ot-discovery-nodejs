@@ -7,6 +7,7 @@ _ = require "lodash"
 
 module.exports = class DiscoveryAnnouncer
 
+  # @announcementHost should contain a hostname only
   constructor: (@logger, @announcementHost, @discoveryNotifier) ->
     @ANNOUNCED_ATTEMPTS = 20
     @INITIAL_BACKOFFS = 500
@@ -77,7 +78,7 @@ module.exports = class DiscoveryAnnouncer
     if server
       Promise.resolve server
     else
-      url = @announcementHost + "/watch"
+      url = "http://#{@announcementHost}/watch"
       return RequestPromise(
         url:url
         json:true

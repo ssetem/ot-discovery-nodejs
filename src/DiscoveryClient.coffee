@@ -44,6 +44,14 @@ class DiscoveryClient
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
+    checkHostName = (hostname) ->
+      if hostname.indexOf("http://") > 0
+        throw new Error "announcementHost should not contain http:// - use direct host name";
+
+    checkHostName @host
+    _.forEach @announcementHosts, checkHostName
+      
+
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
     @serverList = new ServerList @logger
