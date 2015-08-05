@@ -27,7 +27,7 @@ class DiscoveryLongPoller
   poll:() =>
     @server = @serverList.getRandom()
     @nextIndex = @announcementIndex.index + 1
-    url = "#{@server}/watch?since=#{@nextIndex}" + @serviceName? "&clientServiceType=#{@serviceName}" : ""
+    url = "#{@server}/watch?since=#{@nextIndex}" + if @serviceName?  then "&clientServiceType=#{@serviceName}" else ""
     @currentRequest = request {url:url, json:true}, (error, response, body)=>
       if error
         @handleError error

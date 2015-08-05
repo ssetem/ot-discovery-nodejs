@@ -92,6 +92,44 @@ describe "AnnouncementIndex", ->
     expect(@discoveryNotifier.notifyWatchers.called).to.be.ok
     expect(@discoveryNotifier.notifyWatchers.firstCall.args[0].index).to.equal 1
 
+  it "should not notify if processUpdate is called with shouldNotify =false", ->
+    @announcementIndex.processUpdate({
+      fullUpdate:true
+      index:1
+      deletes:[]
+      updates:[]
+    }, false)
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {}
+    expect(@announcementIndex.index).to.equal 1
+    expect(@discoveryNotifier.notifyWatchers.called).to.not.be.ok
+
+  it "fullUpdate with removal of old items on new watch=x update, and fullUpdate:false", ->
+    @announcementIndex.processUpdate({
+      fullUpdate:true
+      index:1
+      deletes:[]
+      updates:[
+        {announcementId:"b1", serviceType:"gc-web", serviceUri:"gcweb.otenv.com"}
+        {announcementId:"b2", serviceType:"discovery", serviceUri:"discovery.otenv.com"}
+      ]
+    }, false)
+    @announcementIndex.processUpdate({
+      fullUpdate:false
+      index:2
+      deletes:["b1"]
+      updates:[]
+    }, false)
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {
+      b2:
+        announcementId: 'b2',
+        serviceType: 'discovery',
+        serviceUri: 'discovery.otenv.com'
+    }
+    expect(@announcementIndex.index).to.equal 2
+    expect(@announcementIndex.discoveryServers).to.deep.equal [
+      "discovery.otenv.com"
+    ]
+
   it "findAll()", ->
     expect(@announcementIndex.findAll()).to.deep.equal []
     expect(@announcementIndex.findAll("discovery")).to.deep.equal [
@@ -224,3 +262,5 @@ describe "AnnouncementIndex multi region", ->
         @sampleAnnouncements[6].serviceUri,
         @sampleAnnouncements[7].serviceUri        
       ]
+
+

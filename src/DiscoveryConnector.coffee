@@ -10,7 +10,7 @@ class DiscoveryConnector
     @INITIAL_BACKOFF = 500
 
   connectUrl:()->
-    "http://#{@host}/watch" + @serviceName? "?clientServiceType=#{@serviceName}" : ""
+    "http://#{@host}/watch" +  if @serviceName?  then "?clientServiceType=#{@serviceName}" else ""
 
   connect:()->
     Utils.promiseRetry(

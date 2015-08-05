@@ -1,4 +1,4 @@
-xdescribe('discovery', function(){
+describe('discovery', function(){
   var nock = require("nock");
   var should = require("should");
   var disco, host, servers;

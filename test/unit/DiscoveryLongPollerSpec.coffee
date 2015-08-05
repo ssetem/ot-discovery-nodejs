@@ -1,58 +1,64 @@
-DiscoveryClient = require("#{srcDir}/DiscoveryClient")
+DiscoveryLongPoller = require("#{srcDir}/DiscoveryLongPoller")
+ServerList = require "#{srcDir}/ServerList"
+AnnouncementIndex = require "#{srcDir}/AnnouncementIndex"
 Utils           = require("#{srcDir}/Utils")
 nock            = require "nock"
 _               = require "lodash"
+sinon = require "sinon"
 
-describe "DiscoveryLongPoller", ->
+describe.only "DiscoveryLongPoller", ->
 
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
-      logger:
-        logs:[]
-        log:()->
-          # console.log arguments
-          @logs.push(arguments)
-    })
-    @logger = @discoveryClient.logger
-    @poller = @discoveryClient.discoveryLongPoller
-
+    # @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
+    #   logger:
+    #     logs:[]
+    #     log:()->
+    #       # console.log arguments
+    #       @logs.push(arguments)
+    # })
+    @logger = 
+      log: () -> 
+    @serverList = new ServerList @logger
+    @announcementIndex = 
+      processUpdate: (item) ->
+        @announcementIndex.index = item.index
+      index: -1
+    @discoveryNotifier = 
+      notifyError: (error) ->
+        console.log "GOT ERROR", error
+    @discoveryLongPoller = new DiscoveryLongPoller testServiceName, @serverList, @announcementIndex, @discoveryNotifier, () -> 
+    
     @discoveryServer = "http://discover-server"
-    @discoveryClient.reconnect = ->
-
-    @discoveryClient.serverList.servers = [
-      @discoveryServer
-    ]
+    @serverList.addServers [@discoveryServer]
 
   afterEach ->
     nock.cleanAll()
 
-  it "should exist", ->
-    expect(@poller).to.exist
-
-
   describe "startPolling()", ->
-
     it "successful poll", (done)->
-
       r1 = nock(@discoveryServer)
-        .get("/watch?clientServiceType=#{testServiceName}&since=0")
+        .filteringPath (path)->
+          console.log "PATH IS:", path
+        .get("/watch?since=0&clientServiceType=#{testServiceName}")
         .reply(200, {index:0})
       r2 = nock(@discoveryServer)
-        .get("/watch?clientServiceType=#{testServiceName}&since=1")
+        .get("/watch?since=1&clientServiceType=#{testServiceName}")
         .reply(200, {index:1})
       r3 = nock(@discoveryServer)
-        .get("/watch?clientServiceType=#{testServiceName}&since=2")
+        .get("/watch?since=2&clientServiceType=#{testServiceName}")
         .reply(204)
       r4 = nock(@discoveryServer)
-        .get("/watch?clientServiceType=#{testServiceName}&since=2")
+        .get("/watch?since=2&clientServiceType=#{testServiceName}")
         .reply(200, {
           index:100
         })
 
       updates = []
-      @discoveryClient.onUpdate (update)->
+      @announcementIndex.processUpdate = sinon.spy (update) =>
+        console.log "SETTING INDEX TO:", update.index
+        @announcementIndex.index = update.index
         updates.push(update)
         if update.index is 100
           r1.done()
@@ -66,22 +72,24 @@ describe "DiscoveryLongPoller", ->
           ]
           done()
 
-      @poller.startPolling()
+      @discoveryLongPoller.startPolling()
 
     it "no connect error remove server from rotation", (done)->
       errors = []
-      @discoveryClient.onError (err)=>
+      @discoveryNotifier.notifyError = (err)=>
         expect(err.name).to.equal(
           "NetConnectNotAllowedError")
 
-        @poller.stopPolling()
-        expect(@discoveryClient.getServers())
-          .to.deep.equal []
+        @discoveryLongPoller.stopPolling()
+        expect(@serverList.isEmpty())
+          .to.be.true
         done()
 
-      @poller.startPolling()
+      @discoveryLongPoller.startPolling()
 
-
+    it "should not called announcementIndex.update on 204", (done) ->
+      expect(false)
+      done()
 
 
 

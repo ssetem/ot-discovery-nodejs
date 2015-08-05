@@ -46,7 +46,7 @@ class DiscoveryClient
 
     checkHostName = (hostname) ->
       if hostname.indexOf("http://") > 0
-        throw new Error "announcementHost should not contain http:// - use direct host name";
+        throw new Error "announcementHost should not contain http:// - use direct host name"
 
     checkHostName @host
     _.forEach @announcementHosts, checkHostName
@@ -56,8 +56,8 @@ class DiscoveryClient
     @discoveryNotifier = new DiscoveryNotifier @logger
     @serverList = new ServerList @logger
     @announcementIndex = new AnnouncementIndex @serverList, @discoveryNotifier, @_homeRegionName
-    @discoveryConnector = new DiscoveryConnector @host, @serviceName, @logger, @discoveryNotifier
-    @discoveryLongPoller = new DiscoveryLongPoller @serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
+    @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger, @discoveryNotifier
+    @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
 
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
       new DiscoveryAnnouncer @logger, host, @discoveryNotifier

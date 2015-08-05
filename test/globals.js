@@ -5,12 +5,12 @@ global.expect         = chai.expect;
 global.srcDir         = path.join(__dirname, "../src");
 global.discovery      = require(path.join(__dirname, "../discovery"));
 global.testHosts    = { 
-                          discoverRegionHost: 'testHost',
-                          announceHosts: ['testHost']
+                          discoverRegionHost: 'testhost',
+                          announceHosts: ['testhost']
                         }
 global.api2testHosts= { 
-                          discoverRegionHost: 'testHost',
-                          announceHosts: ['testHost', 'announceHost2']
+                          discoverRegionHost: 'testhost',
+                          announceHosts: ['testhost', 'announcehost2']
                         }
 global.testServiceName= "testServiceName"
 global.testHomeRegionName= "testHomeRegionName"

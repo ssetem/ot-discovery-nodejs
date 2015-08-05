@@ -11,7 +11,7 @@ describe "DiscoveryAnnouncer", ->
     @logger =
       log: sinon.spy()
       
-    @discoveryHost = "http://discover-host"
+    @discoveryHost = "discover-host"
     @discoveryServer = "http://discover-server"
     @discoveryNotifier =
       notifyAndReject: sinon.spy (err) ->
@@ -38,7 +38,7 @@ describe "DiscoveryAnnouncer", ->
   describe "announce", ->
     it "announce() success after failure", (done) ->
       watch =
-        nock(@discoveryHost)
+        nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -59,7 +59,7 @@ describe "DiscoveryAnnouncer", ->
     it "announce() error after max failure", (done)->
       @announcer.ANNOUNCED_ATTEMPTS = 0
       watch =
-        nock(@discoveryHost)
+        nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -75,7 +75,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() failure removes server out of rotation", (done)->
       watch =
-        nock(@discoveryHost)
+        nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
           
