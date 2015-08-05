@@ -6,9 +6,11 @@ DiscoveryLongPoller = require "./DiscoveryLongPoller"
 ServerList = require "./ServerList"
 Utils = require "./Utils"
 Promise = require "bluebird"
+_ = require "lodash"
+
 
   # host = 'http://discovery.discoservice.com'
-  #  
+  #
   # announcementHosts - ['http://discovery_server2.org', 'http://discovery_server3.org']
   #
   # homeRegionName = 'something-prod-etc' - used to set environement field in announce posts
@@ -23,7 +25,6 @@ Promise = require "bluebird"
 class DiscoveryClient
   constructor:(@host, announcementHosts, homeRegionName, serviceName, @options)->
     if @options?.apiv2Strict
-      errmsg
       unless Array.isArray announcementHosts
         errmsg = "announcementHosts must be an array."
       unless typeof homeRegionName == "string"
@@ -33,7 +34,7 @@ class DiscoveryClient
 
       if errmsg
         throw new Error errmsg
-
+    
     if Array.isArray announcementHosts
       @_announcementHosts = announcementHosts
     else
@@ -91,18 +92,18 @@ class DiscoveryClient
     if @_homeRegionName
       announcement.environment = @_homeRegionName
     
-    announcedPromises = _.map @_discoveryAnnouncers, (announcer) => 
+    announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       announcer.announce announcement
-    Promise.all(announcedPromises).nodefiy(callback)
+    Promise.all(announcedPromises).nodeify(callback)
 
   #TEST THIS FOR SURE TOR TEST TES TEST TEST TEST
   unannounce: (announcements, callback) =>
     unnnouncedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       for ann in announcements
-        if announcer.hasAnnounced ann 
+        if announcer.hasAnnounced ann
           announcer.unannounce ann
 
-    Promises.all(unnnouncedPromises).nodefiy(callback)
+    Promises.all(unnnouncedPromises).nodeify(callback)
 
   dispose: () ->
     @stopAnnouncementHeartbeat()

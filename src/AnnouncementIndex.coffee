@@ -62,8 +62,8 @@ class AnnouncementIndex
     _.chain @_announcements
       .filter predicate
       .groupBy 'serviceType'
-      .map (services) =>
-        bothRegions = _.partition services, (service) =>
+      .map (services) ->
+        bothRegions = _.partition services, (service) ->
           service.environment == discoverRegion
 
         if bothRegions[0].length > 0 then bothRegions[0] else bothRegions[1]

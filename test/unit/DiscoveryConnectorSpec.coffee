@@ -21,7 +21,7 @@ describe "DiscoveryConnector", ->
     @getRetryCalls = =>
       _.pluck(Utils.promiseRetry.getCalls(), "args")
 
-    @discoveryServer = "http://" + @discoveryClient.getHostUrl()
+    @discoveryServer = "http://" + @discoveryClient.host
 
     @successfulUpdate = {
       "fullUpdate":true,
@@ -63,7 +63,7 @@ describe "DiscoveryConnector", ->
       @connector.connect()
         .catch (e)=>
           expect(e.message).to.equal(
-            'Nock: Not allow net connect for "' + @discoveryClient.getHostUrl() + ':80/watch' + "?clientServiceType=#{testServiceName}\"")
+            'Nock: Not allow net connect for "' + @discoveryClient.host + ':80/watch' + "?clientServiceType=#{testServiceName}\"")
           expect([
             [@connector.attemptConnect, 3, 1]
             [@connector.attemptConnect, 2, 2]

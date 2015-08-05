@@ -12,7 +12,6 @@ module.exports = class DiscoveryAnnouncer
     @INITIAL_BACKOFFS = 500
     @_announcedRecords = {}
     @HEARTBEAT_INTERVAL_MS = 10 * 1000
-
     @serverList = new ServerList @logger
 
   pingAllAnnouncements: () =>
@@ -32,32 +31,35 @@ module.exports = class DiscoveryAnnouncer
       @attemptAnnounce.bind(@, announcement)
       @ANNOUNCED_ATTEMPTS
       @INITIAL_BACKOFFS
-    )
+    ).nodeify(callback)
 
   removeAnnouncement: (announcement) =>
     delete @_announcedRecords[announcement.announcementId]
 
   attemptAnnounce: (announcement) =>
     announcement.announcementId or= Utils.generateUUID()
-    getServer().then (server)=>
-      @logger.log "debug", "Announcing " + JSON.stringify(announcement)
-      url = server + "/announcement"
-      RequestPromise({
-        url: url
-        method: "POST"
-        json: true
-        body: announcement
-      }).catch((error) =>
-        @serverList.dropServer server
-        @discoveryNotifier.notifyAndReject error
-      ).then(@handleResponse)
-    .catch (getServerError) =>
-      @discoveryNotifier.notifyAndReject new Error("Coult not get server from #{@announcementHost}")
+    @getServer()
+      .catch (getServerError) =>
+        @discoveryNotifier.notifyAndReject new Error("Couldn't watch server #{@announcementHost}")
+      .then (server) =>
+        @logger.log "debug", "Announcing " + JSON.stringify(announcement)
+        url = server + "/announcement"
+
+        RequestPromise({
+          url: url
+          method: "POST"
+          json: true
+          body: announcement
+        }).catch((error) =>
+          @serverList.dropServer server
+          @discoveryNotifier.notifyAndReject error
+        ).then(@handleResponse)
 
   handleResponse: (response) =>
     unless response?.statusCode is 201
       return @discoveryNotifier.notifyAndReject(
         new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}") )
+
     announcement = response.body
     @logger.log "info", "Announced as ", JSON.stringify(announcement)
     @_doAddAnnouncement announcement
@@ -71,29 +73,31 @@ module.exports = class DiscoveryAnnouncer
     @_announcedRecords[announcement.announcementId] = announcement
 
   getServer: () =>
-    Promise.method () =>
-      server = @serverList.getRandom()
-      if server
-        return server
-      else
-        url = "http://#{@announcementHost}/watch"
-        RequestPromise  
-          url,
-          json:true
-        .then (response) =>
-          @serverList.addServers _.chain(response.updates)
-            .where({serviceType:"discovery"})
-            .pluck("serviceUri")
-            .value()
-          console.log "SERVERLIST AFTER ADDING SERVERS FROM GETSERVER():", @serverList.servers
-          returnedServer = @serverList.getRandom()
-          unless returnedServer
-            console.log "WE DIDNT GET ANY SERVERS, AGAIN, totally owned"
-            throw new Error "We are totally screwed"
-          returnedServer
+    server = @serverList.getRandom()
+    if server
+      Promise.resolve server
+    else
+      url = @announcementHost + "/watch"
+      return RequestPromise(
+        url:url
+        json:true
+      ).then (response) =>
+        servers = _.chain(response.body.updates)
+          .where({serviceType:"discovery"})
+          .pluck("serviceUri")
+          .value()
+
+        @serverList.addServers servers
+
+        returnedServer = @serverList.getRandom()
+
+        if returnedServer
+          Promise.resolve returnedServer
+        else
+          Promise.reject new Error("No servers after watch")
 
   attemptUnannounce: (announcement) =>
-    getServer().then (server)=>
+    @getServer().then (server)=>
       url = "#{server}/announcement/#{announcement.announcementId}"
       RequestPromise({
         url: url
@@ -113,4 +117,3 @@ module.exports = class DiscoveryAnnouncer
     if @_AnnouncementHeartbeatInterval
       clearInterval @_AnnouncementHeartbeatInterval
     @_AnnouncementHeartbeatInterval = null
-

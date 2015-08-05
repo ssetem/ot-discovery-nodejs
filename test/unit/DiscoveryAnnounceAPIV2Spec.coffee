@@ -6,7 +6,7 @@ describe "DiscoveryAnnouncer api v2", ->
   beforeEach ->
     nock.cleanAll()
     nock.disableNetConnect()
-    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
+    @discoveryClient = new DiscoveryClient( api2testHosts.discoverRegionHost, api2testHosts.announceHosts,testHomeRegionName, testServiceName, {
       logger:
         logs:[]
         log:(args...)->
@@ -16,14 +16,14 @@ describe "DiscoveryAnnouncer api v2", ->
           @logs.push(args)
     })
     @logger = @discoveryClient.logger
-    @announcer = @discoveryClient.discoveryAnnouncer
 
     @discoveryServer = "http://discover-server.com"
     @externalDiscoServer = "http://second-disco-server.com"
-    @discoveryClient.serverList.servers = [
+
+    @discoveryClient._discoveryAnnouncers[0].serverList.servers = [
       @discoveryServer
     ]
-    @discoveryClient.regions[api2testHosts.announceRegions[1]].serverList.servers = [
+    @discoveryClient._discoveryAnnouncers[1].serverList.servers = [
       @externalDiscoServer
     ]
 
@@ -31,13 +31,13 @@ describe "DiscoveryAnnouncer api v2", ->
       announcementId: "announcementId1",
       serviceType : "my-new-service",
       serviceUri  : "http://my-new-service:8080"
-      environment : api2testHosts.announceRegions[0]
+      environment : api2testHosts.announceHosts[0]
     }
     @announcement2 = {
       announcementId: "announcementId2",
       serviceType : "my-new-service",
       serviceUri  : "http://my-new-service:8080"
-      environment : api2testHosts.announceRegions[1]
+      environment : api2testHosts.announceHosts[1]
     }
 
   describe "announce", ->

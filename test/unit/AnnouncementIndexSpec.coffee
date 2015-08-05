@@ -1,17 +1,15 @@
 
 AnnouncementIndex = require("#{srcDir}/AnnouncementIndex")
-DiscoveryClient = require("#{srcDir}/DiscoveryClient")
+sinon = require('sinon')
 
 describe "AnnouncementIndex", ->
-
   beforeEach ->
-    @discoveryClient = new DiscoveryClient( testHosts.discoverRegionHost, testHosts.announceHosts,testHomeRegionName, testServiceName, {
-      logger:
-        logs:[]
-        log:()->
-          @logs.push(arguments)
-    })
-    @announcementIndex = @discoveryClient.announcementIndex
+    @serverList = 
+      addServers: sinon.spy()
+    @discoveryNotifier =
+      notifyWatchers: sinon.spy()
+    @announcementIndex = new AnnouncementIndex @serverList, @discoveryNotifier
+    
     @sampleAnnouncements = [
       {
         "announcementId":"a1",
@@ -32,12 +30,7 @@ describe "AnnouncementIndex", ->
 
     @announcementIndex.addAnnouncements @sampleAnnouncements
 
-
-  it "should exist", ->
-    expect(@announcementIndex).to.exist
-
   it "addAnnouncements", ->
-
     expect(@announcementIndex.getAnnouncements()["a1"])
       .to.deep.equal @sampleAnnouncements[0]
 
@@ -68,12 +61,11 @@ describe "AnnouncementIndex", ->
     @announcementIndex.computeDiscoveryServers()
     expect(@announcementIndex.getDiscoveryServers())
       .to.deep.equal [@sampleAnnouncements[1].serviceUri]
-    expect(@discoveryClient.getServers())
-      .to.deep.equal [@sampleAnnouncements[1].serviceUri]
+    expect(@serverList.addServers.calledWithMatch([@sampleAnnouncements[1].serviceUri]))
+      .to.be.ok
 
 
   it "processUpdate - fullUpdate", ->
-    @discoveryClient.onUpdate (@update)=>
     @announcementIndex.processUpdate({
       fullUpdate:true
       index:1
@@ -97,7 +89,8 @@ describe "AnnouncementIndex", ->
     expect(@announcementIndex.discoveryServers).to.deep.equal [
       "discovery.otenv.com"
     ]
-    expect(@update.index).to.equal 1
+    expect(@discoveryNotifier.notifyWatchers.called).to.be.ok
+    expect(@discoveryNotifier.notifyWatchers.firstCall.args[0].index).to.equal 1
 
   it "findAll()", ->
     expect(@announcementIndex.findAll()).to.deep.equal []
@@ -130,90 +123,88 @@ describe "AnnouncementIndex", ->
 describe "AnnouncementIndex multi region", ->
   describe "find api", ->
     beforeEach ->
-        @discoveryClient = new DiscoveryClient( api2testHosts.discoverRegionHost, api2testHosts.announceHosts,testHomeRegionName, testServiceName, {
-          logger:
-            logs:[]
-            log:()->
-              @logs.push(arguments)
-        })
-        @announcementIndex = @discoveryClient.announcementIndex
-        @sampleAnnouncements = [
-          {
-            "announcementId":"a1",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"discovery",
-            "serviceUri":"http://1.1.1.1:2"
-            "feature":"test",
-            "environment": api2testHosts.announceRegions[0]
-          },
-          {
-            "announcementId":"a2",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"myservice",
-            "serviceUri":"http://1.1.1.1:3"
-            "environment": api2testHosts.announceRegions[0]
-          },
-          {
-            "announcementId":"a2b",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"myservice",
-            "serviceUri":"http://99.99.99.99:3"
-            "environment": api2testHosts.announceRegions[1]
-          },
-          {
-            "announcementId":"a3",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"nonlocalservice",
-            "serviceUri":"http://99.99.99.99:4"
-            "environment": api2testHosts.announceRegions[1]
-          },
-          {
-            "announcementId":"a4a",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"tonsofservers",
-            "serviceUri":"http://1.1.1.1:1"
-            "environment": api2testHosts.announceRegions[0]
-          },
-          {
-            "announcementId":"a4b",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"tonsofservers",
-            "serviceUri":"http://1.1.1.1:2"
-            "environment": api2testHosts.announceRegions[0]
-          },
-          {
-            "announcementId":"a4c",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"tonsofservers",
-            "serviceUri":"http://1.1.1.1:3"
-            "environment": api2testHosts.announceRegions[0]
-          },
-          {
-            "announcementId":"a4d",
-            "staticAnnouncement":false,
-            "announceTime":"2015-03-30T18:26:52.178Z",
-            "serviceType":"tonsofservers",
-            "serviceUri":"http://1.1.1.9:3"
-            "environment": api2testHosts.announceRegions[1]
-          }
-        ]
+      @serverList = 
+        addServers: sinon.spy()
+      @announcementIndex = new AnnouncementIndex @serverList, null
+      
+      @sampleAnnouncements = [
+        {
+          "announcementId":"a1",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"discovery",
+          "serviceUri":"http://1.1.1.1:2"
+          "feature":"test",
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a2",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"myservice",
+          "serviceUri":"http://1.1.1.1:3"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a2b",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"myservice",
+          "serviceUri":"http://99.99.99.99:3"
+          "environment": api2testHosts.announceHosts[1]
+        },
+        {
+          "announcementId":"a3",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"nonlocalservice",
+          "serviceUri":"http://99.99.99.99:4"
+          "environment": api2testHosts.announceHosts[1]
+        },
+        {
+          "announcementId":"a4a",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:1"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4b",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:2"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4c",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:3"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4d",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.9:3"
+          "environment": api2testHosts.announceHosts[1]
+        }
+      ]
 
-        @announcementIndex.addAnnouncements @sampleAnnouncements
+      @announcementIndex.addAnnouncements @sampleAnnouncements
 
     it "findAll() should return local environment services given two regions", ->
       predicate = (announcement)->
         announcement.serviceType is "myservice"
 
-      expect(@announcementIndex.findAll(predicate)).to.deep.equal [
-        @sampleAnnouncements[1].serviceUri
-      ]
+      expect(@announcementIndex.findAll(predicate, api2testHosts.announceHosts[0]))
+        .to.deep.equal [
+          @sampleAnnouncements[1].serviceUri
+        ]
       
     it "should return non-local environment given only non-local environment", ->
       predicate = (announcement)->
@@ -230,5 +221,6 @@ describe "AnnouncementIndex multi region", ->
       expect(@announcementIndex.findAll(predicate)).to.deep.equal [
         @sampleAnnouncements[4].serviceUri,
         @sampleAnnouncements[5].serviceUri,
-        @sampleAnnouncements[6].serviceUri
+        @sampleAnnouncements[6].serviceUri,
+        @sampleAnnouncements[7].serviceUri        
       ]
