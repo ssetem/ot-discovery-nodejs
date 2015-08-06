@@ -7,7 +7,7 @@ class Utils
   promiseRetry:(fn, times=Infinity, backoff=500)->
     MAX_BACKOFF = 10 * 1000
     fn().catch (e)=>
-      if times is 0
+      if times < 1
         Promise.reject(e)
       else
         Promise.delay(backoff).then =>

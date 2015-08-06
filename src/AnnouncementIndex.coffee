@@ -3,12 +3,14 @@ _ = require "lodash"
 
 class AnnouncementIndex
 
-  constructor:(@serverList, @discoveryNotifier)->
-    @announcements = {}
+  constructor:(@serverList, @discoveryNotifier) ->
+    #use the getter... not the direct private member!
+    @_announcements = {}
+
     @discoveryServers = []
     @index = -1
 
-  processUpdate:(update, shouldNotify)->
+  processUpdate:(update, shouldNotify) ->
     if update.fullUpdate
       @clearAnnouncements()
 
@@ -19,46 +21,57 @@ class AnnouncementIndex
     if shouldNotify
       @discoveryNotifier.notifyWatchers(update)
 
-  removeAnnouncements:(ids=[])->
-    @announcements = _.omit(@announcements, ids)
+  removeAnnouncements:(ids=[]) ->
+    @_announcements = _.omit(@_announcements, ids)
 
   addAnnouncements:(announcements=[])->
-    @announcements = _.extend(
-      @announcements,
+    @_announcements = _.extend @_announcements,
       _.indexBy(announcements, "announcementId")
-    )
+    
 
-  clearAnnouncements:()->
-    @announcements = {}
+  getAnnouncements:() =>
+    @_announcements
 
-  setIndex:(@index)=>
+  clearAnnouncements:() ->
+    @_announcements = {}
 
-  computeDiscoveryServers:()->
-    @discoveryServers = _.chain(@announcements)
+  setIndex:(@index) =>
+
+  computeDiscoveryServers:() ->
+    @discoveryServers = _.chain(@_announcements)
       .where({serviceType:"discovery"})
       .pluck("serviceUri")
       .value()
     @serverList.addServers(@discoveryServers)
 
-  getDiscoveryServers:()->
+  getDiscoveryServers:() ->
     @discoveryServers
 
-  serviceTypePredicate:(serviceType, announcement)->
+  serviceTypePredicate:(serviceType, announcement) ->
     serviceType in [
       announcement.serviceType
       "#{announcement.serviceType}:#{announcement.feature}"
     ]
 
-  findAll:(predicate)->
-    unless _.isFunction(predicate)
-      predicate = @serviceTypePredicate.bind(@, predicate)
+  findAll:(predicate, discoverRegion) =>
+    unless _.isFunction predicate
+      predicate = @serviceTypePredicate.bind @, predicate
 
-    _.chain(@announcements)
-      .filter(predicate)
-      .pluck("serviceUri")
+    # Return services but if we have services from our home/discoverRegion return those over
+    # ones in external regions
+    _.chain @_announcements
+      .filter predicate
+      .groupBy 'serviceType'
+      .map (services) ->
+        bothRegions = _.partition services, (service) ->
+          service.environment == discoverRegion
+
+        if bothRegions[0].length > 0 then bothRegions[0] else bothRegions[1]
+      .flatten()
+      .pluck "serviceUri"
       .value()
 
-  find:(predicate)->
+  find:(predicate) ->
     _.sample @findAll(predicate)
 
 

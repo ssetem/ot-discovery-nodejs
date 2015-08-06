@@ -1,17 +1,15 @@
-AnnouncementIndex = require("#{srcDir}/AnnouncementIndex")
-DiscoveryClient = require("#{srcDir}/DiscoveryClient")
 
+AnnouncementIndex = require("#{srcDir}/AnnouncementIndex")
+sinon = require('sinon')
 
 describe "AnnouncementIndex", ->
-
   beforeEach ->
-    @discoveryClient = new DiscoveryClient("host", {
-      logger:
-        logs:[]
-        log:()->
-          @logs.push(arguments)
-    })
-    @announcementIndex = @discoveryClient.announcementIndex
+    @serverList = 
+      addServers: sinon.spy()
+    @discoveryNotifier =
+      notifyWatchers: sinon.spy()
+    @announcementIndex = new AnnouncementIndex @serverList, @discoveryNotifier
+    
     @sampleAnnouncements = [
       {
         "announcementId":"a1",
@@ -32,16 +30,11 @@ describe "AnnouncementIndex", ->
 
     @announcementIndex.addAnnouncements @sampleAnnouncements
 
-
-  it "should exist", ->
-    expect(@announcementIndex).to.exist
-
   it "addAnnouncements", ->
-
-    expect(@announcementIndex.announcements["a1"])
+    expect(@announcementIndex.getAnnouncements()["a1"])
       .to.deep.equal @sampleAnnouncements[0]
 
-    expect(@announcementIndex.announcements["a2"])
+    expect(@announcementIndex.getAnnouncements()["a2"])
       .to.deep.equal @sampleAnnouncements[1]
 
     @announcementIndex.addAnnouncements [{
@@ -49,31 +42,30 @@ describe "AnnouncementIndex", ->
       "serviceType":"discovery"
     }]
 
-    expect(@announcementIndex.announcements["a1"]).to.deep.equal {
+    expect(@announcementIndex.getAnnouncements()["a1"]).to.deep.equal {
       "announcementId":"a1"
       "serviceType":"discovery"
     }
 
   it "removeAnnouncements", ->
     @announcementIndex.removeAnnouncements(["a2"])
-    expect(@announcementIndex.announcements).to.deep.equal {
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {
       "a1":@sampleAnnouncements[0]
     }
 
   it "clearAnnouncements()", ->
     @announcementIndex.clearAnnouncements()
-    expect(@announcementIndex.announcements).to.deep.equal {}
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {}
 
   it "computeDiscoverServers()", ->
     @announcementIndex.computeDiscoveryServers()
     expect(@announcementIndex.getDiscoveryServers())
       .to.deep.equal [@sampleAnnouncements[1].serviceUri]
-    expect(@discoveryClient.getServers())
-      .to.deep.equal [@sampleAnnouncements[1].serviceUri]
+    expect(@serverList.addServers.calledWithMatch([@sampleAnnouncements[1].serviceUri]))
+      .to.be.ok
 
 
   it "processUpdate - fullUpdate", ->
-    @discoveryClient.onUpdate (@update)=>
     @announcementIndex.processUpdate({
       fullUpdate:true
       index:1
@@ -83,7 +75,7 @@ describe "AnnouncementIndex", ->
         {announcementId:"b2", serviceType:"discovery", serviceUri:"discovery.otenv.com"}
       ]
     }, true)
-    expect(@announcementIndex.announcements).to.deep.equal {
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {
       b1:
         announcementId: 'b1',
         serviceType: 'gc-web',
@@ -97,7 +89,46 @@ describe "AnnouncementIndex", ->
     expect(@announcementIndex.discoveryServers).to.deep.equal [
       "discovery.otenv.com"
     ]
-    expect(@update.index).to.equal 1
+    expect(@discoveryNotifier.notifyWatchers.called).to.be.ok
+    expect(@discoveryNotifier.notifyWatchers.firstCall.args[0].index).to.equal 1
+
+  it "should not notify if processUpdate is called with shouldNotify =false", ->
+    @announcementIndex.processUpdate({
+      fullUpdate:true
+      index:1
+      deletes:[]
+      updates:[]
+    }, false)
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {}
+    expect(@announcementIndex.index).to.equal 1
+    expect(@discoveryNotifier.notifyWatchers.called).to.not.be.ok
+
+  it "fullUpdate with removal of old items on new watch=x update, and fullUpdate:false", ->
+    @announcementIndex.processUpdate({
+      fullUpdate:true
+      index:1
+      deletes:[]
+      updates:[
+        {announcementId:"b1", serviceType:"gc-web", serviceUri:"gcweb.otenv.com"}
+        {announcementId:"b2", serviceType:"discovery", serviceUri:"discovery.otenv.com"}
+      ]
+    }, false)
+    @announcementIndex.processUpdate({
+      fullUpdate:false
+      index:2
+      deletes:["b1"]
+      updates:[]
+    }, false)
+    expect(@announcementIndex.getAnnouncements()).to.deep.equal {
+      b2:
+        announcementId: 'b2',
+        serviceType: 'discovery',
+        serviceUri: 'discovery.otenv.com'
+    }
+    expect(@announcementIndex.index).to.equal 2
+    expect(@announcementIndex.discoveryServers).to.deep.equal [
+      "discovery.otenv.com"
+    ]
 
   it "findAll()", ->
     expect(@announcementIndex.findAll()).to.deep.equal []
@@ -127,5 +158,109 @@ describe "AnnouncementIndex", ->
 
     expect(@announcementIndex.find("discovery")).to.exist
 
+describe "AnnouncementIndex multi region", ->
+  describe "find api", ->
+    beforeEach ->
+      @serverList = 
+        addServers: sinon.spy()
+      @announcementIndex = new AnnouncementIndex @serverList, null
+      
+      @sampleAnnouncements = [
+        {
+          "announcementId":"a1",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"discovery",
+          "serviceUri":"http://1.1.1.1:2"
+          "feature":"test",
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a2",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"myservice",
+          "serviceUri":"http://1.1.1.1:3"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a2b",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"myservice",
+          "serviceUri":"http://99.99.99.99:3"
+          "environment": api2testHosts.announceHosts[1]
+        },
+        {
+          "announcementId":"a3",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"nonlocalservice",
+          "serviceUri":"http://99.99.99.99:4"
+          "environment": api2testHosts.announceHosts[1]
+        },
+        {
+          "announcementId":"a4a",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:1"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4b",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:2"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4c",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.1:3"
+          "environment": api2testHosts.announceHosts[0]
+        },
+        {
+          "announcementId":"a4d",
+          "staticAnnouncement":false,
+          "announceTime":"2015-03-30T18:26:52.178Z",
+          "serviceType":"tonsofservers",
+          "serviceUri":"http://1.1.1.9:3"
+          "environment": api2testHosts.announceHosts[1]
+        }
+      ]
+
+      @announcementIndex.addAnnouncements @sampleAnnouncements
+
+    it "findAll() should return local environment services given two regions", ->
+      predicate = (announcement)->
+        announcement.serviceType is "myservice"
+
+      expect(@announcementIndex.findAll(predicate, api2testHosts.announceHosts[0]))
+        .to.deep.equal [
+          @sampleAnnouncements[1].serviceUri
+        ]
+      
+    it "should return non-local environment given only non-local environment", ->
+      predicate = (announcement)->
+        announcement.serviceType is "nonlocalservice"
+
+      expect(@announcementIndex.findAll(predicate)).to.deep.equal [
+        @sampleAnnouncements[3].serviceUri
+      ]
+
+    it "should return all the local services given predicate", ->
+      predicate = (announcement)->
+        announcement.serviceType is "tonsofservers"
+
+      expect(@announcementIndex.findAll(predicate)).to.deep.equal [
+        @sampleAnnouncements[4].serviceUri,
+        @sampleAnnouncements[5].serviceUri,
+        @sampleAnnouncements[6].serviceUri,
+        @sampleAnnouncements[7].serviceUri        
+      ]
 
 

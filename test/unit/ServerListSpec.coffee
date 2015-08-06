@@ -1,17 +1,12 @@
 ServerList = require("#{srcDir}/ServerList")
-DiscoveryClient = require("#{srcDir}/DiscoveryClient")
-
+sinon = require "sinon"
 
 describe "ServerList", ->
-
   beforeEach ->
-    @discoveryClient = new DiscoveryClient("host", {
-      logger:
-        logs:[]
-        log:()->
-          @logs.push(arguments)
-    })
-    @serverList = @discoveryClient.serverList
+    @logger =
+      log: sinon.spy()
+
+    @serverList = new ServerList @logger
 
   it "should exist", ->
     expect(@serverList).toExist
