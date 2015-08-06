@@ -19,18 +19,18 @@ var minimist = require('minimist');
 var _ = require('lodash');
 
 var defaultPaths = {
-  scripts: ['discovery.js'],
-  tests: ['tests/**/*.js', 'tests/*.js'],
+  scripts: ['src/**/*.coffee'],
+  tests: ['test/**/*.coffee'],
   noCoverageTests: [],
   coverage: 'coverage/',
   zipCoverage: 'coverage/*'
 };
 
 var defaultCoverageThresholds = {
-  statements: 61,
+  statements: 90,
   branches: 50,
-  functions: 65,
-  lines: 61
+  functions: 90,
+  lines: 80
 };
 
 function hasCoffeeScriptInPaths(paths) {
@@ -53,6 +53,8 @@ function hasCoffeeScriptInPaths(paths) {
 
 function test(gulp, path, opts) {
   opts = opts || {};
+
+  require('./test/globals');
 
   var mochaOpts = minimist(process.argv.slice(2), {
     default: _.merge({
@@ -79,9 +81,6 @@ var coverageTest = function(cb, paths, mochaOpts) {
   }));
 
   gulp.src(paths.scripts)
-    // .pipe(debug({
-    //   title: 'starter!'
-    // }))
     .pipe(istanbul({
       instrumenter: isparta.Instrumenter,
       includeUntested: true
@@ -110,11 +109,7 @@ var coverageTest = function(cb, paths, mochaOpts) {
 }
 
 gulp.task('test-all-coverage', function(cb) {
-  var testServer = require('./tests/tasks/dummyServer')();
-  coverageTest(function() {
-    testServer.close();
-    cb();
-  }, defaultPaths)
+  coverageTest(cb, defaultPaths);
 });
 
 
