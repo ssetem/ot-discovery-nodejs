@@ -6,6 +6,7 @@ var fullUpdate;
 var noUpdate;
 var announcement;
 var announcementFailure;
+var announce;
 
 describe('# announce tests', function(){
   beforeEach(function(done){
