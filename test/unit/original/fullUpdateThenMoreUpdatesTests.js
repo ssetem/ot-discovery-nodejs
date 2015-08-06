@@ -3,6 +3,7 @@ var nock = require('nock');
 var constants = require('./testConstants.js');
 var utils = require('./testUtils.js');
 var fullUpdate;
+var smallUpdate;
 var noUpdate;
 var TOTAL_TEST_TIME = 3000;
 var UPDATE_TIME_DELAY_MS = 2000;
