@@ -14,10 +14,6 @@ class Utils
           newBackoff = Math.min(backoff * 2, MAX_BACKOFF)
           @promiseRetry fn, times-1, newBackoff
 
-  invokeAll:(fns, args...)->
-    for fn in fns
-      fn.apply(null, args)
-
   generateUUID:()->
     uuid.v4()
 

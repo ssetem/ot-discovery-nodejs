@@ -1,10 +1,10 @@
 Promise = require "bluebird"
 Utils   = require "./Utils"
-
+_ = require "lodash"
 
 class DiscoveryNotifier
 
-  constructor:(@logger)->
+  constructor: (@logger) ->
     @errorHandlers = [
       @logger.log.bind(@logger, "error", "Discovery error: ")
     ]
@@ -12,11 +12,11 @@ class DiscoveryNotifier
       @logger.log.bind(@logger, "debug", "Discovery update: ")
     ]
 
-  notifyError:(error)->
-    Utils.invokeAll(@errorHandlers, error)
+  notifyError: (error) ->
+    _.invoke(@errorHandlers, _.call, null, error)
 
-  notifyWatchers:(body)->
-    Utils.invokeAll(@watchers, body)
+  notifyWatchers: (body) ->
+    _.invoke(@watchers, _.call, null, body)
 
   onUpdate:(fn)->
     @watchers.push(fn)
