@@ -42,7 +42,7 @@ class DiscoveryLongPoller
     @serverList.dropServer(@server)
     @discoveryNotifier.notifyError(error)
 
-  handleResponse:(response)=>
+  handleResponse: (response) ->
     return unless @shouldBePolling
     #no new updates
     unless response?.statusCode
@@ -54,7 +54,8 @@ class DiscoveryLongPoller
       error = new Error("Bad status code " + response.statusCode + " from watch: " + response)
       @handleError(error)
     else
-      @announcementIndex.processUpdate(response.body, true)
+      @announcementIndex.processUpdate response.body
+      @discoveryNotifier.notifyWatchers response.body
 
 
 module.exports = DiscoveryLongPoller

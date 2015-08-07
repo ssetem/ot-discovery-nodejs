@@ -55,7 +55,7 @@ class DiscoveryClient
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
     @serverList = new ServerList @logger
-    @announcementIndex = new AnnouncementIndex @serverList, @discoveryNotifier, @_homeRegionName
+    @announcementIndex = new AnnouncementIndex @serverList
     @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger, @discoveryNotifier
     @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
 

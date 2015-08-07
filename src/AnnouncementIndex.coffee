@@ -3,14 +3,14 @@ _ = require "lodash"
 
 class AnnouncementIndex
 
-  constructor:(@serverList, @discoveryNotifier) ->
-    # use the getter... not the direct private member!
+  constructor:(@serverList) ->
+    #use the getter... not the direct private member!
     @_announcements = {}
 
     @discoveryServers = []
     @index = -1
 
-  processUpdate:(update, shouldNotify) ->
+  processUpdate:(update) ->
     if update.fullUpdate
       @clearAnnouncements()
 
@@ -18,8 +18,6 @@ class AnnouncementIndex
     @removeAnnouncements(update.deletes)
     @addAnnouncements(update.updates)
     @computeDiscoveryServers()
-    if shouldNotify
-      @discoveryNotifier.notifyWatchers(update)
 
   removeAnnouncements:(ids=[]) ->
     @_announcements = _.omit(@_announcements, ids)
@@ -73,6 +71,5 @@ class AnnouncementIndex
 
   find:(predicate) ->
     _.sample @findAll(predicate)
-
 
 module.exports = AnnouncementIndex

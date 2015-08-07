@@ -19,8 +19,8 @@ describe "DiscoveryLongPoller", ->
       processUpdate: sinon.spy()
 
     @discoveryNotifier =
-      notifyError: sinon.spy (error) ->
-        Promise.reject(error)
+      notifyError: sinon.spy()
+      notifyWatchers: sinon.spy()
 
     @reconnect = sinon.spy()
 
@@ -66,7 +66,7 @@ describe "DiscoveryLongPoller", ->
     beforeEach ->
       @discoveryLongPoller.shouldBePolling = true
 
-    it "calls process if 200", (done) ->
+    it "calls process and watchers if 200", (done) ->
       @announcementIndex.index = 1
       nock(@discoveryServer)
         .get("/watch?since=2&clientServiceType=#{testServiceName}")
@@ -74,6 +74,7 @@ describe "DiscoveryLongPoller", ->
 
       @discoveryLongPoller.schedulePoll = () ->
         expect(@announcementIndex.processUpdate.called).to.be.ok
+        expect(@discoveryNotifier.notifyWatchers.called).to.be.ok
         done()
 
       @discoveryLongPoller.poll()
