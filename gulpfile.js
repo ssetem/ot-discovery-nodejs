@@ -153,7 +153,7 @@ gulp.task('jslint', function() {
   var src = filterPaths(".js", defaultPaths.scripts, defaultPaths.tests);
   return gulp.src(src)
     .pipe(jshint())
-    .pipe(coffeelint.reporter('default'))
+    .pipe(jshint.reporter())
     .pipe(jshint.reporter('fail'));
 });
 
