@@ -18,6 +18,7 @@ var minimist = require('minimist');
 var _ = require('lodash');
 var coffeelint = require('gulp-coffeelint');
 var jshint = require('gulp-jshint');
+var gulpif = require('gulp-if');
 
 var defaultPaths = {
   scripts: ['src/**/*.coffee', 'src/**/*.js'],
@@ -74,7 +75,7 @@ function test(gulp, path, opts) {
     .pipe(mocha(mochaOpts));
 }
 
-var coverageTest = function(cb, paths, mochaOpts, doCoverage) {
+var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
   if (hasCoffeeScriptInPaths(paths)) {
     istanbul = require('gulp-coffee-istanbul');
   } else {
@@ -91,23 +92,26 @@ var coverageTest = function(cb, paths, mochaOpts, doCoverage) {
     })) // Force `require` to return covered files
     .pipe(istanbul.hookRequire()) // Force `require` to return covered files
     .on('finish', function() {
-      var testStream = test(gulp, testsPaths, mochaOpts);
-      if(doCoverage) {
-        testStream.pipe(istanbul.writeReports({
-          dir: paths.coverage,
-          reportOpts: {
-            dir: paths.coverage
-          },
-          reporters: ['text', 'text-summary', 'json', 'html', 'teamcity']
-        }))
-        .pipe(coverageEnforcer({
-          thresholds: defaultCoverageThresholds,
-          coverageDirectory: paths.coverage,
-          rootDirectory: ''
-        }))
-      }
-
-      testStream.on('finish', cb).once('error', function() {
+      var doCoverage = !skipCoverage;
+        test(gulp, testsPaths, mochaOpts)
+        .pipe( gulpif(doCoverage, 
+          istanbul.writeReports({
+            dir: paths.coverage,
+            reportOpts: {
+              dir: paths.coverage
+            },
+            reporters: ['text', 'text-summary', 'json', 'html', 'teamcity']
+          })
+        ))
+        .pipe(gulpif(doCoverage,
+          coverageEnforcer({
+            thresholds: defaultCoverageThresholds,
+            coverageDirectory: paths.coverage,
+            rootDirectory: ''
+          })
+        ))
+        .on('finish', cb)
+        .once('error', function() {
           process.exit(1);
         })
         .once('end', function() {
@@ -158,7 +162,7 @@ gulp.task('default', ['jslint', 'coffeelint', 'test-all-coverage']);
 gulp.task('lint', ['jslint', 'coffeelint']);
 
 gulp.task('test', function(cb) {
-  coverageTest(cb, defaultPaths, null, false);
+  coverageTest(cb, defaultPaths, null, true);
 });
 
 /* jshint ignore:end */
