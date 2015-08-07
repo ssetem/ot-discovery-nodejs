@@ -1,9 +1,9 @@
 Promise = require "bluebird"
 Errors = require "./Errors"
-RequestPromise = require "./RequestPromise"
 Utils = require "./Utils"
 ServerList = require "./ServerList"
 _ = require "lodash"
+request = Promise.promisify require("request")
 
 module.exports = class DiscoveryAnnouncer
 
@@ -42,22 +42,22 @@ module.exports = class DiscoveryAnnouncer
         @logger.log "debug", "Announcing " + JSON.stringify(announcement)
         url = server + "/announcement"
 
-        RequestPromise({
+        request
           url: url
           method: "POST"
           json: true
           body: announcement
-        }).catch((error) =>
+        .catch (error) =>
           @serverList.dropServer server
           @discoveryNotifier.notifyAndReject error
-        ).then(@handleResponse)
+        .spread @handleResponse
 
-  handleResponse: (response) =>
+  handleResponse: (response, body) =>
     unless response?.statusCode is 201
       return @discoveryNotifier.notifyAndReject(
-        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(response.body)}") )
+        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(body)}") )
 
-    announcement = response.body
+    announcement = body
     @logger.log "info", "Announced as ", JSON.stringify(announcement)
     @_doAddAnnouncement announcement
     return announcement
@@ -74,11 +74,11 @@ module.exports = class DiscoveryAnnouncer
       Promise.resolve server
     else
       url = "http://#{@announcementHost}/watch"
-      return RequestPromise(
+      request
         url:url
         json:true
-      ).then (response) =>
-        servers = _.chain(response.body.updates)
+      .spread (response, body) =>
+        servers = _.chain(body.updates)
           .where({serviceType:"discovery"})
           .pluck("serviceUri")
           .value()
@@ -95,12 +95,12 @@ module.exports = class DiscoveryAnnouncer
   attemptUnannounce: (announcement) =>
     @getServer().then (server)=>
       url = "#{server}/announcement/#{announcement.announcementId}"
-      RequestPromise({
+      request
         url: url
         method: "DELETE"
-      } ).then (response) =>
+      .spread (response, body) =>
         @removeAnnouncement(announcement)
-        @logger.log("info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(response.body)}")
+        @logger.log "info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(body)}"
       .catch (error) =>
         @serverList.dropServer server
         @discoveryNotifier.notifyAndReject error

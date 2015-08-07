@@ -1,7 +1,7 @@
-Promise        = require "bluebird"
-Errors         = require "./Errors"
-RequestPromise = require "./RequestPromise"
-Utils          = require "./Utils"
+Promise= require "bluebird"
+Errors = require "./Errors"
+Utils = require "./Utils"
+request = Promise.promisify require("request")
 
 class DiscoveryConnector
 
@@ -23,16 +23,18 @@ class DiscoveryConnector
     url = @connectUrl()
     @logger.log("debug", "Attempting connection to #{url}")
 
-    RequestPromise(url:url, json:true)
-      .catch(@discoveryNotifier.notifyAndReject)
-      .then(@handle)
+    request
+      url: url
+      json: true
+    .catch @discoveryNotifier.notifyAndReject
+    .spread @handle
 
-  handle:(response)=>
+  handle:(response, body)=>
     if response.statusCode != 200
       return @discoveryNotifier.notifyAndReject(
-        new Errors.DiscoveryConnectError(response.body))
+        new Errors.DiscoveryConnectError(body))
 
-    update = response.body
+    update = body
 
     unless update?.fullUpdate
       return @discoveryNotifier.notifyAndReject(
