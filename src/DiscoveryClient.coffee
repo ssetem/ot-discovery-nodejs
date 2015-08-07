@@ -102,14 +102,20 @@ class DiscoveryClient
 
     announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       announcer.announce announcement
-    Promise.all(announcedPromises).nodeify(callback)
+    Promise.all(announcedPromises).catch (e) =>
+      @discoveryNotifier.notifyError(e)
+      throw e
+    .nodeify(callback)
 
   unannounce: (announcements, callback) =>
     unannouncedPromises = _.map _.zip(@_discoveryAnnouncers, announcements),
       (announcementPair) ->
         announcementPair[0].unannounce announcementPair[1]
 
-    Promise.all(unannouncedPromises).nodeify(callback)
+    Promise.all(unannouncedPromises).catch (e) =>
+      @discoveryNotifier.notifyError(e)
+      throw e
+    .nodeify(callback)
 
   dispose: () ->
     @stopAnnouncementHeartbeat()

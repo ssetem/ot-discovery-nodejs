@@ -6,72 +6,50 @@ _ = require "lodash"
 request = Promise.promisify require("request")
 
 module.exports = class DiscoveryAnnouncer
-
   # @announcementHost should contain a hostname only
-  constructor: (@logger, @announcementHost, @discoveryNotifier) ->
-    @ANNOUNCED_ATTEMPTS = 20
-    @INITIAL_BACKOFFS = 500
+  constructor: (@logger, @announcementHost) ->
     @_announcedRecords = {}
     @HEARTBEAT_INTERVAL_MS = 10 * 1000
     @serverList = new ServerList @logger
 
   pingAllAnnouncements: () =>
-    Promise.settle(_.map(@_announcedRecords, @attemptAnnounce) )
+    Promise.settle _.map(@_announcedRecords, @announce)
       .then(Utils.groupPromiseInspections)
       .then (resultGroups) =>
         if resultGroups.rejected?.length > 0
           @logger.log "error", "#{resultGroups.rejected?.length} announcements failed"
         resultGroups.fulfilled
 
-  announce: (announcement) ->
-    Utils.promiseRetry(
-      @attemptAnnounce.bind(@, announcement)
-      @ANNOUNCED_ATTEMPTS
-      @INITIAL_BACKOFFS
-    )
-
-  removeAnnouncement: (announcement) =>
-    delete @_announcedRecords[announcement.announcementId]
-
-  attemptAnnounce: (announcement) =>
+  announce: (announcement) =>
     announcement.announcementId or= Utils.generateUUID()
     @getServer()
-      .catch (getServerError) =>
-        @discoveryNotifier.notifyAndReject new Error("Couldn't watch server #{@announcementHost}")
       .then (server) =>
-        @logger.log "debug", "Announcing " + JSON.stringify(announcement)
         url = server + "/announcement"
+        @logger.log "debug", "Announcing to ${url}" + JSON.stringify(announcement)
 
         request
           url: url
           method: "POST"
           json: true
           body: announcement
+        .spread @handleResponse
         .catch (error) =>
           @serverList.dropServer server
-          @discoveryNotifier.notifyAndReject error
-        .spread @handleResponse
+          throw error
 
   handleResponse: (response, body) =>
     unless response?.statusCode is 201
-      return @discoveryNotifier.notifyAndReject(
-        new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(body)}") )
+      throw new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(body)}")
 
     announcement = body
     @logger.log "info", "Announced as ", JSON.stringify(announcement)
-    @_doAddAnnouncement announcement
-    return announcement
-
-  unannounce: (announcement) ->
-    @attemptUnannounce(announcement)
-
-  _doAddAnnouncement: (announcement) =>
     @_announcedRecords[announcement.announcementId] = announcement
+    announcement
 
-  getServer: () =>
+  getServer: Promise.method () ->
     server = @serverList.getRandom()
     if server
-      Promise.resolve server
+      server
     else
       url = "http://#{@announcementHost}/watch"
       request
@@ -87,23 +65,24 @@ module.exports = class DiscoveryAnnouncer
 
         returnedServer = @serverList.getRandom()
 
-        if returnedServer
-          Promise.resolve returnedServer
-        else
-          Promise.reject new Error("No servers after watch")
+        if not returnedServer
+          throw new Error("watch returned no servers")
 
-  attemptUnannounce: (announcement) =>
-    @getServer().then (server)=>
+        returnedServer
+
+  unannounce: (announcement) ->
+    @getServer().then (server) =>
       url = "#{server}/announcement/#{announcement.announcementId}"
       request
         url: url
         method: "DELETE"
       .spread (response, body) =>
-        @removeAnnouncement(announcement)
-        @logger.log "info", "Unannounce DELETE '#{url}' returned #{response.statusCode}:#{JSON.stringify(body)}"
-      .catch (error) =>
+        delete @_announcedRecords[announcement.announcementId]
+        @logger.log "info", "Unannounce DELETE '#{url}' " +
+          "returned #{response.statusCode}:#{JSON.stringify(body)}"
+      .catch (e) ->
         @serverList.dropServer server
-        @discoveryNotifier.notifyAndReject error
+        throw e
 
   startAnnouncementHeartbeat: () =>
     @stopAnnouncementHeartbeat()

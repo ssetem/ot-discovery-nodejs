@@ -1,4 +1,4 @@
-DiscoveryAnnouncer = require("#{srcDir}/DiscoveryAnnouncer")
+DiscoveryAnnouncer = require "#{srcDir}/DiscoveryAnnouncer"
 nock = require "nock"
 _ = require "lodash"
 sinon = require "sinon"
@@ -13,12 +13,8 @@ describe "DiscoveryAnnouncer", ->
 
     @discoveryHost = "discover-host"
     @discoveryServer = "http://discover-server"
-    @discoveryNotifier =
-      notifyAndReject: sinon.spy (err) ->
-        return Promise.reject err
 
-    @announcer = new DiscoveryAnnouncer(@logger, @discoveryHost, @discoveryNotifier)
-    @announcer.INITIAL_BACKOFFS = 1
+    @announcer = new DiscoveryAnnouncer @logger, @discoveryHost
 
     @discoAnnouncements =
       updates: [
@@ -36,16 +32,11 @@ describe "DiscoveryAnnouncer", ->
     }
 
   describe "announce", ->
-    it "announce() success after failure", (done) ->
+    it "announce() success", (done) ->
       watch =
         nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
-
-      initialFailure =
-        nock(@discoveryServer)
-          .post('/announcement', @announcement)
-          .reply(400, "Simulated error")
 
       success =
         nock(@discoveryServer)
@@ -53,55 +44,71 @@ describe "DiscoveryAnnouncer", ->
           .reply(201, @announcement)
 
       @announcer.announce(@announcement).then (result) =>
+        watch.done()
+        success.done()
         expect(result).to.deep.equal @announcement
-        done()
+        return
+      .then(done).catch(done)
 
-    it "announce() error after max failure", (done)->
-      @announcer.ANNOUNCED_ATTEMPTS = 0
+    it "announce() status code error", (done) ->
       watch =
         nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
-      initialFailure =
+      failure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
           .reply(400, "Simulated error")
 
       @announcer.announce(@announcement)
-        .catch (e) ->
+        .catch (e) =>
+          watch.done()
+          failure.done()
           expect(e.message).to.equal 'During announce, bad status code 400:"Simulated error"'
           done()
 
-    it "announce() failure removes server out of rotation", (done)->
+    it "announce() rejects and removes", (done) ->
       watch =
         nock("http://#{@discoveryHost}")
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
-      initialFailure =
+      @announcer.announce(@announcement)
+        .catch (e) =>
+          watch.done()
+          expect(e).to.be.ok
+          expect(@announcer.serverList.isEmpty).to.be.ok
+          done()
+
+    it "announce() bad status code removes server out of rotation", (done) ->
+      watch =
+        nock("http://#{@discoveryHost}")
+          .get('/watch')
+          .reply(200, @discoAnnouncements)
+
+      failure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
           .reply(400, "Simulated error")
 
-      @announcer.ANNOUNCED_ATTEMPTS = 0
-
       @announcer.announce(@announcement)
-        .catch (e)=>
+        .catch (e) =>
           expect(@announcer.serverList.isEmpty).to.be.ok
           done()
 
-    it "all servers removed forces a rewatch", (done) ->
-      done()
-
-    it "watch fails forces a reattempt", (done) ->
+    it "watch fails status code", (done) ->
       watch =
         nock("http://#{@discoveryHost}")
           .get('/watch')
-          .times(5)
           .reply(500)
 
-      @announcer.ANNOUNCED_ATTEMPTS = 5
+      @announcer.announce(@announcement)
+        .catch (e) =>
+          expect(e).to.be.ok;
+          done()
+
+    it "watch rejects", (done) ->
       @announcer.announce(@announcement)
         .catch (e) ->
           expect(e).to.be.ok
@@ -112,12 +119,12 @@ describe "DiscoveryAnnouncer", ->
       # in this test, we won't test the server list / watch which is tested
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
-      @announcer._doAddAnnouncement @announcement
+      @announcer.handleResponse {statusCode:201}, @announcement
       @announcement2 =
         announcementId: "a2"
         serviceType: "my-other-service"
         serviceUri: "http://my-other-service"
-      @announcer._doAddAnnouncement @announcement2
+      @announcer.handleResponse {statusCode:201}, @announcement2
 
     it "pingAllAnnouncements - success", (done)->
       a1Request =
@@ -132,7 +139,8 @@ describe "DiscoveryAnnouncer", ->
 
       @announcer.pingAllAnnouncements().then (announced) =>
         expect(announced).to.deep.equal([@announcement, @announcement2])
-        done()
+        return
+      .then(done).catch(done)
 
     it "pingAllAnnouncements - failure", (done)->
       #test that even if one fails the entire thing succeeds
@@ -149,19 +157,23 @@ describe "DiscoveryAnnouncer", ->
       @announcer.pingAllAnnouncements().then (announced) =>
         expect(announced).to.deep.equal([@announcement2])
         expect(@logger.log.calledWith('error', '1 announcements failed')).to.be.ok
-        done()
+        return
+      .then(done).catch(done)
 
   describe "unannounce", () ->
     beforeEach ->
       # in this test, we won't test the server list / watch which is tested
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
-      @announcer._doAddAnnouncement @announcement
+      @announcer.handleResponse {statusCode: 201}, @announcement
 
     it "unannounce - error - no connect", (done) ->
       @announcer.unannounce(@announcement).catch (e) ->
         expect(e).to.be.ok
         done()
+
+    it "unannouce - status code - error", (done) ->
+      done()
 
     it "unannounce - success", (done)->
       unannounceRequest = nock(@discoveryServer)
@@ -169,6 +181,7 @@ describe "DiscoveryAnnouncer", ->
         .reply(200)
       @announcer.unannounce(@announcement).then (result) ->
         done()
+      .catch(done)
 
   describe "heartbeats", () ->
     before () ->

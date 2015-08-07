@@ -100,15 +100,19 @@ describe "DiscoveryClient", ->
         done()
       .catch(done)
 
-    it "announce fails if one announce fails", (done) ->
+    it "announce fails if one announce fails and error watchers", (done) ->
       @announcers[0].announce = sinon.spy (announce) ->
         Promise.resolve(announce)
       @announcers[1].announce = sinon.spy (announce) ->
         Promise.reject new Error('an error')
 
+      errorSpy = sinon.spy()
+      @discoveryClient.onError errorSpy
+
       @discoveryClient.announce({}).then (result) ->
         done new Error('should not get here')
       .catch (err) ->
+        expect(errorSpy.called).to.be.ok
         expect(err).to.be.ok
         done()
 
@@ -125,14 +129,18 @@ describe "DiscoveryClient", ->
         done()
       .catch(done)
 
-    it "unannounce fails if one unannounce fails", (done) ->
+    it "unannounce fails if one unannounce fails and error watchers", (done) ->
       @announcers[0].unannounce = sinon.spy()
       @announcers[1].unannounce = sinon.spy () ->
         Promise.reject new Error('something')
 
+      errorSpy = sinon.spy()
+      @discoveryClient.onError errorSpy
+
       @discoveryClient.unannounce([1,2]).then () ->
         done new Error('should not get here')
-      .catch (err) ->
+      .catch (err) =>
+        expect(errorSpy.called).to.be.ok
         expect(err).to.be.ok
         done()
 
