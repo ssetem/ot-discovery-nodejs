@@ -19,7 +19,7 @@ describe "DiscoveryConnector", ->
       
     @connector = new DiscoveryConnector @host, null, @logger, @discoveryNotifier
     sinon.spy(Utils, "promiseRetry")
-    @getRetryCalls = =>
+    @getRetryCalls = ->
       _.pluck(Utils.promiseRetry.getCalls(), "args")
 
     @discoveryServer = "http://" + @host
@@ -47,7 +47,7 @@ describe "DiscoveryConnector", ->
       }
 
   afterEach ->
-    nock.cleanAll();
+    nock.cleanAll()
     Utils.promiseRetry.restore()
 
   describe "connect", ->
@@ -97,7 +97,7 @@ describe "DiscoveryConnector", ->
           'Unabled to initiate discovery: {"fullUpdate":false}'
         done()
 
-    describe 'api v2', () -> 
+    describe 'api v2', () ->
       it 'should use watch?clientServiceType=x interface', () ->
         connector = new DiscoveryConnector @host, testServiceName, @logger, @discoveryNotifier
         successfulRequest = nock(@discoveryServer)

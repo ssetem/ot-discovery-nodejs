@@ -4,7 +4,7 @@ sinon = require('sinon')
 
 describe "AnnouncementIndex", ->
   beforeEach ->
-    @serverList = 
+    @serverList =
       addServers: sinon.spy()
     @discoveryNotifier =
       notifyWatchers: sinon.spy()
@@ -161,7 +161,7 @@ describe "AnnouncementIndex", ->
 describe "AnnouncementIndex multi region", ->
   describe "find api", ->
     beforeEach ->
-      @serverList = 
+      @serverList =
         addServers: sinon.spy()
       @announcementIndex = new AnnouncementIndex @serverList, null
       
@@ -260,7 +260,7 @@ describe "AnnouncementIndex multi region", ->
         @sampleAnnouncements[4].serviceUri,
         @sampleAnnouncements[5].serviceUri,
         @sampleAnnouncements[6].serviceUri,
-        @sampleAnnouncements[7].serviceUri        
+        @sampleAnnouncements[7].serviceUri
       ]
 
 

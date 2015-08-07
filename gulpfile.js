@@ -8,7 +8,6 @@ require('should');
 
 // Include gulp
 var gulp = require('gulp');
-require('gulp-grunt')(gulp);
 var istanbul = require('gulp-istanbul');
 // We'll use mocha here, but any test framework will work
 var mocha = require('gulp-mocha');
@@ -17,10 +16,13 @@ var coverageEnforcer = require('gulp-istanbul-enforcer');
 var gulpIgnore = require('gulp-ignore');
 var minimist = require('minimist');
 var _ = require('lodash');
+var coffeelint = require('gulp-coffeelint');
+var jshint = require('gulp-jshint');
+var gulpif = require('gulp-if');
 
 var defaultPaths = {
-  scripts: ['src/**/*.coffee'],
-  tests: ['test/**/*.coffee'],
+  scripts: ['src/**/*.coffee', 'src/**/*.js'],
+  tests: ['test/**/*.coffee', 'test/**/*.js'],
   noCoverageTests: [],
   coverage: 'coverage/',
   zipCoverage: 'coverage/*'
@@ -33,32 +35,30 @@ var defaultCoverageThresholds = {
   lines: 80
 };
 
-function hasCoffeeScriptInPaths(paths) {
-  var pathArray;
-  for (var key in paths) {
-    pathArray = paths[key];
-    if (Array.isArray(pathArray) === false) {
-      if (pathArray.indexOf('.coffee') > -1) {
-        return true;
-      }
-    }
-    for (var i = 0; i < pathArray.length; i++) {
-      if (pathArray[i].indexOf('.coffee') > -1) {
-        return true;
-      }
-    };
-  }
-  return false;
+function createFilteredPaths(normalPaths, toFilterPaths) {
+  return normalPaths.concat(toFilterPaths.map(function(item) {
+    return '!' + item;
+  }));
+}
+
+function filterPaths(filetype, args) {
+  var paths = [];
+  _.each(arguments, function(arg) {
+    _.each(arg, function(path) {
+      if (path.indexOf(filetype) > 0)
+        paths.push(path);
+    });
+  });
+  return paths;
 }
 
 function test(gulp, path, opts) {
   opts = opts || {};
 
-  require('./test/globals');
-
   var mochaOpts = minimist(process.argv.slice(2), {
     default: _.merge({
-      timeout: 7000
+      timeout: 7000,
+      require: ['./test/globals.js']
     }, opts)
   });
 
@@ -68,17 +68,16 @@ function test(gulp, path, opts) {
     .pipe(mocha(mochaOpts));
 }
 
-var coverageTest = function(cb, paths, mochaOpts) {
-  if (hasCoffeeScriptInPaths(paths)) {
+var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
+  //checking to see if we have any coffeescript files, then we gotta load up gci instead of babel
+  if (JSON.stringify(paths).indexOf('.coffee') > -1) {
     istanbul = require('gulp-coffee-istanbul');
   } else {
     require('babel/register');
     istanbul = require('gulp-istanbul');
   }
 
-  var testsPaths = paths.tests.concat(paths.noCoverageTests.map(function(item) {
-    return '!' + item;
-  }));
+  var testsPaths = createFilteredPaths(paths.tests, paths.noCoverageTests);
 
   gulp.src(paths.scripts)
     .pipe(istanbul({
@@ -87,19 +86,26 @@ var coverageTest = function(cb, paths, mochaOpts) {
     })) // Force `require` to return covered files
     .pipe(istanbul.hookRequire()) // Force `require` to return covered files
     .on('finish', function() {
+      var doCoverage = !skipCoverage;
       test(gulp, testsPaths, mochaOpts)
-        .pipe(istanbul.writeReports({
-          dir: paths.coverage,
-          reportOpts: {
-            dir: paths.coverage
-          },
-          reporters: ['text', 'text-summary', 'json', 'html', 'teamcity']
-        }))
-        .pipe(coverageEnforcer({
-          thresholds: defaultCoverageThresholds,
-          coverageDirectory: paths.coverage,
-          rootDirectory: ''
-        })).on('finish', cb).once('error', function() {
+        .pipe(gulpif(doCoverage,
+          istanbul.writeReports({
+            dir: paths.coverage,
+            reportOpts: {
+              dir: paths.coverage
+            },
+            reporters: ['text', 'text-summary', 'json', 'html', 'teamcity']
+          })
+        ))
+        .pipe(gulpif(doCoverage,
+          coverageEnforcer({
+            thresholds: defaultCoverageThresholds,
+            coverageDirectory: paths.coverage,
+            rootDirectory: ''
+          })
+        ))
+        .on('finish', cb)
+        .once('error', function() {
           process.exit(1);
         })
         .once('end', function() {
@@ -112,7 +118,32 @@ gulp.task('test-all-coverage', function(cb) {
   coverageTest(cb, defaultPaths);
 });
 
+gulp.task('coffeelint', function() {
+  var src = filterPaths(".coffee", defaultPaths.scripts, defaultPaths.tests);
+  gulp.src(src)
+    .pipe(coffeelint({
+      "max_line_length": {
+        "level": "ignore"
+      }
+    }))
+    .pipe(coffeelint.reporter())
+    .pipe(coffeelint.reporter('fail'))
+});
 
-gulp.task('default', ['grunt-jshint', 'test-all-coverage']);
+gulp.task('jslint', function() {
+  var src = filterPaths(".js", defaultPaths.scripts, defaultPaths.tests);
+  return gulp.src(src)
+    .pipe(jshint())
+    .pipe(jshint.reporter())
+    .pipe(jshint.reporter('fail'));
+});
+
+gulp.task('default', ['jslint', 'coffeelint', 'test-all-coverage']);
+
+gulp.task('lint', ['jslint', 'coffeelint']);
+
+gulp.task('test', function(cb) {
+  coverageTest(cb, defaultPaths, null, true);
+});
 
 /* jshint ignore:end */
