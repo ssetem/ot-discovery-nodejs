@@ -23,33 +23,31 @@ _ = require "lodash"
   # so (host, options) is valid. and will result in the old behaviour
 
 class DiscoveryClient
-  constructor:(@host, announcementHosts, homeRegionName, serviceName, @options)->
+  constructor:(@host, announcementHosts, homeRegionName, serviceName, @options) ->
+    _.each arguments, (arg) =>
+      console.log "arg is:", arg, typeof arg == "object" and not Array.isArray arg
+      if typeof arg == "object" and not Array.isArray arg
+        @options = arg
+
     if @options?.apiv2Strict
       unless Array.isArray announcementHosts
-        errmsg = "announcementHosts must be an array."
+        throw new  Error "announcementHosts must be an array of hostnames(strings)."
       unless typeof homeRegionName == "string"
-        errmsg = "homeRegionName must be a valid string."
+        throw new  Error "homeRegionName must be a valid string."
       unless typeof serviceName == "string"
-        errmsg = "serviceName must be a valid string."
+        throw new  Error "serviceName must be a valid string."
 
-      if errmsg
-        throw new Error errmsg
-
-    if Array.isArray announcementHosts
-      @_announcementHosts = announcementHosts
-    else
-      @options = if (announcementHosts is Object)? then announcementHosts else @options
-      @_announcementHosts = [@host]
-
+    @_announcementHosts = if Array.isArray announcementHosts then announcementHosts else [@host]
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
     checkHostName = (hostname) ->
-      if hostname.indexOf("http://") > 0
-        throw new Error "announcementHost should not contain http:// - use direct host name"
+      console.log "HOSTNAME IS:", hostname
+      if hostname.indexOf("http://") > -1
+        throw new Error "host/announcementhost should not contain http:// - use direct host name"
 
     checkHostName @host
-    _.forEach @_announcementHosts, checkHostName
+    _.each @_announcementHosts, checkHostName
 
 
     @logger = @options?.logger or require "./ConsoleLogger"

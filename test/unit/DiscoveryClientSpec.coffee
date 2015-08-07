@@ -39,6 +39,37 @@ describe "DiscoveryClient", ->
 
       @announcers = @discoveryClient._discoveryAnnouncers
 
+    it "throws exceptions when using v1 api with apiv2Strict option", ->
+      options = 
+        logger:
+          log: ()->
+        apiv2Strict: true
+
+      expect(() ->
+        discoClient = new DiscoveryClient "hostname", options
+      ).to.throw 'announcementHosts must be an array of hostnames(strings).'
+
+      expect(() ->
+        discoClient = new DiscoveryClient "hostname", ['host1'], options
+      ).to.throw 'homeRegionName must be a valid string.'
+
+      expect(() ->
+        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname', options
+      ).to.throw 'serviceName must be a valid string.'
+
+      expect(() ->
+        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname','myServiceName', options
+      ).to.not.throw()
+
+    it "throws exception with bad hostnames", ->
+       expect(() ->
+        discoClient = new DiscoveryClient "http://hostname", ['host1'],'myhostname','myServiceName', {}
+      ).to.throw 'host/announcementhost should not contain http:// - use direct host name'
+
+      expect(() ->
+        discoClient = new DiscoveryClient "hostname", ['host1', 'http://badhostname'],'myhostname','myServiceName', {}
+      ).to.throw 'host/announcementhost should not contain http:// - use direct host name'
+
     it "creates announcers in each region", ->
       expect(@announcers).to.have.length(2)
 
