@@ -61,6 +61,7 @@ describe "DiscoveryClient", ->
         discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname','myServiceName', options
       ).to.not.throw()
 
+
     it "throws exception with bad hostnames", ->
        expect(() ->
         discoClient = new DiscoveryClient "http://hostname", ['host1'],'myhostname','myServiceName', {}
@@ -69,6 +70,7 @@ describe "DiscoveryClient", ->
       expect(() ->
         discoClient = new DiscoveryClient "hostname", ['host1', 'http://badhostname'],'myhostname','myServiceName', {}
       ).to.throw 'host/announcementhost should not contain http:// - use direct host name'
+
 
     it "creates announcers in each region", ->
       expect(@announcers).to.have.length(2)

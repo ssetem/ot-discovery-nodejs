@@ -25,7 +25,6 @@ _ = require "lodash"
 class DiscoveryClient
   constructor:(@host, announcementHosts, homeRegionName, serviceName, @options) ->
     _.each arguments, (arg) =>
-      console.log "arg is:", arg, typeof arg == "object" and not Array.isArray arg
       if typeof arg == "object" and not Array.isArray arg
         @options = arg
 
@@ -42,7 +41,6 @@ class DiscoveryClient
     @_serviceName = serviceName || null
 
     checkHostName = (hostname) ->
-      console.log "HOSTNAME IS:", hostname
       if hostname.indexOf("http://") > -1
         throw new Error "host/announcementhost should not contain http:// - use direct host name"
 
