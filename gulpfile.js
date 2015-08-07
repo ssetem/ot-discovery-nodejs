@@ -36,27 +36,20 @@ var defaultCoverageThresholds = {
 };
 
 function createFilteredPaths(normalPaths, toFilterPaths) {
- return normalPaths.concat(toFilterPaths.map(function(item) {
+  return normalPaths.concat(toFilterPaths.map(function(item) {
     return '!' + item;
   }));
 }
 
-function hasCoffeeScriptInPaths(paths) {
-  var pathArray;
-  for (var key in paths) {
-    pathArray = paths[key];
-    if (Array.isArray(pathArray) === false) {
-      if (pathArray.indexOf('.coffee') > -1) {
-        return true;
-      }
-    }
-    for (var i = 0; i < pathArray.length; i++) {
-      if (pathArray[i].indexOf('.coffee') > -1) {
-        return true;
-      }
-    };
-  }
-  return false;
+function filterPaths(filetype, args) {
+  var paths = [];
+  _.each(arguments, function(arg) {
+    _.each(arg, function(path) {
+      if (path.indexOf(filetype) > 0)
+        paths.push(path);
+    });
+  });
+  return paths;
 }
 
 function test(gulp, path, opts) {
@@ -76,7 +69,8 @@ function test(gulp, path, opts) {
 }
 
 var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
-  if (hasCoffeeScriptInPaths(paths)) {
+  //checking to see if we have any coffeescript files, then we gotta load up gci instead of babel
+  if (JSON.stringify(paths).indexOf('.coffee') > -1) {
     istanbul = require('gulp-coffee-istanbul');
   } else {
     require('babel/register');
@@ -93,8 +87,8 @@ var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
     .pipe(istanbul.hookRequire()) // Force `require` to return covered files
     .on('finish', function() {
       var doCoverage = !skipCoverage;
-        test(gulp, testsPaths, mochaOpts)
-        .pipe( gulpif(doCoverage, 
+      test(gulp, testsPaths, mochaOpts)
+        .pipe(gulpif(doCoverage,
           istanbul.writeReports({
             dir: paths.coverage,
             reportOpts: {
@@ -124,25 +118,12 @@ gulp.task('test-all-coverage', function(cb) {
   coverageTest(cb, defaultPaths);
 });
 
-function filterPaths(filetype,args) {
-  var paths = [];
-  _.each(arguments,function(arg){
-    _.each(arg, function(path){
-      if(path.indexOf(filetype) > 0)
-        paths.push(path);
-    });
-  });
-  return paths;
-}
-
 gulp.task('coffeelint', function() {
-  var src = filterPaths(".coffee",defaultPaths.scripts, defaultPaths.tests );
+  var src = filterPaths(".coffee", defaultPaths.scripts, defaultPaths.tests);
   gulp.src(src)
     .pipe(coffeelint({
       "max_line_length": {
-        "value": 80,
-        "level": "ignore",
-        "limitComments": false
+        "level": "ignore"
       }
     }))
     .pipe(coffeelint.reporter())
