@@ -1,8 +1,7 @@
 Promise        = require "bluebird"
 Errors         = require "./Errors"
-RequestPromise = require "./RequestPromise"
 Utils          = require "./Utils"
-request        = require "request"
+request        = Promise.promisify require("request")
 
 class DiscoveryLongPoller
 
@@ -28,11 +27,13 @@ class DiscoveryLongPoller
     @server = @serverList.getRandom()
     @nextIndex = @announcementIndex.index + 1
     url = "#{@server}/watch?since=#{@nextIndex}" + if @serviceName?  then "&clientServiceType=#{@serviceName}" else ""
-    @currentRequest = request {url:url, json:true}, (error, response, body)=>
-      if error
-        @handleError error
-      else
-        @handleResponse response
+    @currentRequest = request
+      url:url
+      json:true
+    .spread (response, body) =>
+      @handleResponse response
+    .catch @handleError
+    .finally () =>
       @schedulePoll()
       @currentRequest = null
 
