@@ -30,19 +30,18 @@ class DiscoveryLongPoller
     @currentRequest = request
       url:url
       json:true
-    .spread (response, body) =>
-      @handleResponse response
+    .spread @handleResponse
     .catch @handleError
     .finally () =>
       @schedulePoll()
       @currentRequest = null
 
-  handleError:(error)=>
+  handleError:(error) =>
     return unless @shouldBePolling
     @serverList.dropServer(@server)
     @discoveryNotifier.notifyError(error)
 
-  handleResponse: (response) ->
+  handleResponse: (response, body) =>
     return unless @shouldBePolling
     #no new updates
     unless response?.statusCode
@@ -54,8 +53,8 @@ class DiscoveryLongPoller
       error = new Error("Bad status code " + response.statusCode + " from watch: " + response)
       @handleError(error)
     else
-      @announcementIndex.processUpdate response.body
-      @discoveryNotifier.notifyWatchers response.body
+      @announcementIndex.processUpdate body
+      @discoveryNotifier.notifyWatchers body
 
 
 module.exports = DiscoveryLongPoller
