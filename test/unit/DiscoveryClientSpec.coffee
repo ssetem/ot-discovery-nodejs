@@ -132,7 +132,7 @@ describe "DiscoveryClient", ->
 
       @discoveryClient.unannounce([1,2]).then () ->
         done new Error('should not get here')
-      .catch (err) =>
+      .catch (err) ->
         expect(err).to.be.ok
         done()
 

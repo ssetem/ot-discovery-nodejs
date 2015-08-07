@@ -69,7 +69,7 @@ describe "DiscoveryAnnouncer", ->
           .reply(400, "Simulated error")
 
       @announcer.announce(@announcement)
-        .catch (e)=>
+        .catch (e) ->
           expect(e.message).to.equal 'During announce, bad status code 400:"Simulated error"'
           done()
 
@@ -103,8 +103,8 @@ describe "DiscoveryAnnouncer", ->
 
       @announcer.ANNOUNCED_ATTEMPTS = 5
       @announcer.announce(@announcement)
-        .catch (e) =>
-          expect(e).to.be.ok;
+        .catch (e) ->
+          expect(e).to.be.ok
           done()
 
   describe "pingAllAnnouncements", () ->
@@ -158,8 +158,8 @@ describe "DiscoveryAnnouncer", ->
       @announcer.serverList.addServers [@discoveryServer]
       @announcer._doAddAnnouncement @announcement
 
-    it "unannounce - error - no connect", (done)->
-      @announcer.unannounce(@announcement).catch (e)=>
+    it "unannounce - error - no connect", (done) ->
+      @announcer.unannounce(@announcement).catch (e) ->
         expect(e).to.be.ok
         done()
 
@@ -167,7 +167,7 @@ describe "DiscoveryAnnouncer", ->
       unannounceRequest = nock(@discoveryServer)
         .delete("/announcement/a1")
         .reply(200)
-      @announcer.unannounce(@announcement).then (result)=>
+      @announcer.unannounce(@announcement).then (result) ->
         done()
 
   describe "heartbeats", () ->

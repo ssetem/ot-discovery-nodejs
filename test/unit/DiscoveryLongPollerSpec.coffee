@@ -115,6 +115,6 @@ describe "DiscoveryLongPoller", ->
       nock(@discoveryServer)
         .get("/watch?since=101&clientServiceType=#{testServiceName}")
         .reply(204)
-      @discoveryLongPoller.handleResponse = () =>
+      @discoveryLongPoller.handleResponse = () ->
         done()
       @discoveryLongPoller.poll()

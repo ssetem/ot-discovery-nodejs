@@ -4,7 +4,7 @@ _ = require "lodash"
 class AnnouncementIndex
 
   constructor:(@serverList, @discoveryNotifier) ->
-    #use the getter... not the direct private member!
+    # use the getter... not the direct private member!
     @_announcements = {}
 
     @discoveryServers = []
