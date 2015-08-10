@@ -22,14 +22,3 @@ describe "DiscoveryNotifier", ->
     expect(@logger.log.calledWithMatch("debug", "Discovery update: ", "someUpdate"))
       .to.be.ok
     expect(@recievedUpdate).to.equal "someUpdate"
-
-  it "notifyAndReject()", (done)->
-    error = new Error("oops")
-    @notifier.onError (@notifiedError)=>
-
-    @notifier.notifyAndReject(error).catch (recievedError)=>
-      expect(recievedError).to.equal error
-      expect(@notifiedError).to.equal error
-      done()
-
-

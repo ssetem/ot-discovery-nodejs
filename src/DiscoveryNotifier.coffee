@@ -24,9 +24,4 @@ class DiscoveryNotifier
   onError:(fn)->
     @errorHandlers.push(fn)
 
-  notifyAndReject:(error)=>
-    @notifyError(error)
-    return Promise.reject(error)
-
-
 module.exports = DiscoveryNotifier
