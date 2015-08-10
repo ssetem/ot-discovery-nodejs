@@ -8,22 +8,21 @@ Utils = require "./Utils"
 Promise = require "bluebird"
 _ = require "lodash"
 
-
-  # host = 'http://discovery.discoservice.com'
-  #
-  # announcementHosts - ['http://discovery_server2.org', 'http://discovery_server3.org']
-  #
-  # homeRegionName = 'something-prod-etc' - used to set environement field in announce posts
-  # serviceName = 'myServiceName' - needed for discovery apiv2 - will be sent in the watch request to tell server we are a api2 client
-  # options = {
-  #   logger = console.log...etc
-  #   apiv2Strict = true - will force apiv2 constructor params and throw errors if not met, otherwise allow apiv1 fallback
-  # }
-  # NOTE: there is some interface backwards campatabiltiy with the disco api v1**
-  # so (host, options) is valid. and will result in the old behaviour
+# host = 'http://discovery.discoservice.com'
+#
+# announcementHosts - ['http://discovery_server2.org', 'http://discovery_server3.org']
+#
+# homeRegionName = 'something-prod-etc' - used to set environement field in announce posts
+# serviceName = 'myServiceName' - needed for discovery apiv2 - will be sent in the watch request to tell server we are a api2 client
+# options = {
+#   logger = console.log...etc
+#   apiv2Strict = true - will force apiv2 constructor params and throw errors if not met, otherwise allow apiv1 fallback
+# }
+# NOTE: there is some interface backwards campatabiltiy with the disco api v1**
+# so (host, options) is valid. and will result in the old behaviour
 
 class DiscoveryClient
-  constructor:(@host, announcementHosts, homeRegionName, serviceName, @options)->
+  constructor: (@host, announcementHosts, homeRegionName, serviceName, @options) ->
     if @options?.apiv2Strict
       unless Array.isArray announcementHosts
         errmsg = "announcementHosts must be an array."
@@ -51,20 +50,18 @@ class DiscoveryClient
     checkHostName @host
     _.forEach @_announcementHosts, checkHostName
 
-
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
     @serverList = new ServerList @logger
     @announcementIndex = new AnnouncementIndex @serverList
-    @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger, @discoveryNotifier
+    @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger
     @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
 
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
-      new DiscoveryAnnouncer @logger, host, @discoveryNotifier
+      new DiscoveryAnnouncer @logger, host
 
     Utils.delegateMethods @, @discoveryNotifier, [
-      "log", "onUpdate", "onError", "notifyAndReject"
-      "notifyError", "notifyWatchers"
+      "onUpdate", "onError"
     ]
 
     Utils.delegateMethods @, @announcementIndex, [
@@ -77,15 +74,11 @@ class DiscoveryClient
       .then(@longPollForUpdates)
       .then(@startAnnouncementHeartbeat)
       .then () =>
-        if callback
-          return callback null, @host, @serverList.servers
-        else
-          @servers
-      .catch (e) ->
-        if callback
-          return callback(e)
-        else
-          Promise.reject(e)
+        return [@host, @serverList.servers]
+      .catch (e) =>
+        @discoveryNotifier.notifyError e
+        throw e
+      .nodeify callback, {spread: true}
 
   reconnect: (callback) =>
     @connect(callback)
@@ -126,7 +119,6 @@ class DiscoveryClient
 
   longPollForUpdates: () =>
     @discoveryLongPoller.startPolling()
-    return
 
   getServers: () ->
     @serverList.servers

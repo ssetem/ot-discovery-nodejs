@@ -52,9 +52,9 @@ describe "DiscoveryClient", ->
         }]
 
       @discoveryClient.discoveryConnector.connect = sinon.spy () ->
-        return Promise.resolve(updates)
+        Promise.resolve updates
 
-      sinon.spy(@discoveryClient.announcementIndex, 'processUpdate')
+      sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
       @discoveryClient.longPollForUpdates = sinon.spy()
       @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
       @discoveryClient.connect (err, host, servers) =>
@@ -70,6 +70,14 @@ describe "DiscoveryClient", ->
         expect(host).to.equal(api2testHosts.discoverRegionHost)
         expect(servers).to.deep.equal(['a.disco'])
 
+        done()
+
+    it "connect notifies and errors on failure", (done) ->
+      @discoveryClient.discoveryConnector.connect = sinon.spy () ->
+        Promise.reject new Error('badness')
+
+      @discoveryClient.connect (err) ->
+        expect(err).to.be.ok
         done()
 
     it "heartbeat start calls heartbeat on each region", ->
