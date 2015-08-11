@@ -94,7 +94,7 @@ API Documentation
  *   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED) if you plan to use unannounce.
  *
  * @returns {Promise} Returns a promise object that resolves around the announcements
-
+ */
 
   DiscoveryClient.prototype.unannounce = function(announcements, callback) {}
 /*
@@ -102,5 +102,5 @@ API Documentation
  * @param {function(err, announcedItemLeases )} callback Node style callback for success/error
  *
  * @returns {Promise} Returns a promise object that resolves around the unannounce
-
+ */
 ```
