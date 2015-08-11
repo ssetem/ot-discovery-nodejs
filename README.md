@@ -105,7 +105,7 @@ API Documentation
  *   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED)
  *     if you plan to use unannounce.
  *
- * @returns {Promise} Returns a promise object
+ * @returns {Promise} Returns a promise object that resolves with the itemLeases.
  *
  * NOTE: Announce will error unless the endpoint specified in serviceUri responds
  *   to OPTION / with a valid response
@@ -117,6 +117,6 @@ API Documentation
  *   DiscoveryClient.announce callback - MUST NOT BE MODIFIED- INCLUDING ORDER!
  * @param {function(err)} callback Node style callback
  *
- * @returns {Promise} Returns a promise object
+ * @returns {Promise} Returns a promise object that has an empty resolve.
  */
 ```
