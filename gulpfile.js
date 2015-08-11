@@ -1,4 +1,4 @@
-/* globals require,process */
+/*jslint node: true */
 'use strict';
 
 //mocha required options*****************
@@ -22,8 +22,7 @@ var defaultPaths = {
   tests: ['test/**/*.coffee', 'test/**/*.js'],
   noCoverageTests: [],
   coverage: 'coverage/',
-  zipCoverage: 'coverage/*',
-  gulpFile: ['gulpfile.js']
+  zipCoverage: 'coverage/*'
 };
 
 var defaultCoverageThresholds = {
@@ -121,6 +120,7 @@ gulp.task('coffeelint', function() {
 
 gulp.task('jslint', function() {
   var src = filterPaths('.js', defaultPaths);
+  src.push('gulpfile.js');
   return gulp.src(src)
     .pipe(jshint())
     .pipe(jshint.reporter())
