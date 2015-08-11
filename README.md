@@ -101,7 +101,8 @@ API Documentation
  *      serviceUri:'http://myuri.com'
  *   }
  * @param {function(err, announcedItemLeases )} callback Node style callback
- *   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED)*     if you plan to use unannounce.
+ *   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED)
+ *     if you plan to use unannounce.
  *
  * @returns {Promise} Returns a promise object
  */
