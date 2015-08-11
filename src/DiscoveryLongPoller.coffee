@@ -30,7 +30,7 @@ class DiscoveryLongPoller
           @currentRequest = request
             url:url
             json:true
-          , (err, response, body) =>
+          , (err, response, body) ->
             if err
               reject err
             else

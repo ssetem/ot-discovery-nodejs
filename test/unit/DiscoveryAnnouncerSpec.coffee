@@ -81,7 +81,7 @@ describe "DiscoveryAnnouncer", ->
           .reply(400, "Simulated error")
 
       @announcer.announce(@announcement)
-        .catch (e) =>
+        .catch (e) ->
           watch.done()
           failure.done()
           expect(e.message).to.equal 'During announce, bad status code 400:"Simulated error"'
@@ -123,8 +123,8 @@ describe "DiscoveryAnnouncer", ->
           .reply(500)
 
       @announcer.announce(@announcement)
-        .catch (e) =>
-          expect(e).to.be.ok;
+        .catch (e) ->
+          expect(e).to.be.ok
           done()
 
     it "watch rejects", (done) ->
