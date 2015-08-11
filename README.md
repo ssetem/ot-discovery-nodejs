@@ -6,7 +6,7 @@ Client for OT flavoured service discovery. (Note we are in the process of open-s
 installation:
 
 ```
-npm install ot-discovery
+npm install ot-discovery --save
 ```
 
 usage:
