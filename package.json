@@ -25,7 +25,6 @@
     "gulp": "^3.9.0",
     "gulp-coffee-istanbul": "^0.7.1",
     "gulp-coffeelint": "^0.5.0",
-    "gulp-ignore": "^1.2.1",
     "gulp-istanbul": "^0.10.0",
     "gulp-istanbul-enforcer": "^1.0.3",
     "gulp-jshint": "^1.11.2",

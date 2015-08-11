@@ -1,4 +1,4 @@
-/* jshint ignore:start */
+/* globals require,process */
 'use strict';
 
 //mocha required options*****************
@@ -12,7 +12,6 @@ var istanbul = require('gulp-istanbul');
 var mocha = require('gulp-mocha');
 var isparta = require('isparta');
 var coverageEnforcer = require('gulp-istanbul-enforcer');
-var gulpIgnore = require('gulp-ignore');
 var minimist = require('minimist');
 var _ = require('lodash');
 var coffeelint = require('gulp-coffeelint');
@@ -23,7 +22,8 @@ var defaultPaths = {
   tests: ['test/**/*.coffee', 'test/**/*.js'],
   noCoverageTests: [],
   coverage: 'coverage/',
-  zipCoverage: 'coverage/*'
+  zipCoverage: 'coverage/*',
+  gulpFile: ['gulpfile.js']
 };
 
 var defaultCoverageThresholds = {
@@ -111,8 +111,8 @@ gulp.task('coffeelint', function() {
   var src = filterPaths('.coffee', defaultPaths);
   gulp.src(src)
     .pipe(coffeelint({
-      "max_line_length": {
-        "level": "ignore"
+      'max_line_length': {
+        'level': 'ignore'
       }
     }))
     .pipe(coffeelint.reporter())
@@ -131,4 +131,3 @@ gulp.task('lint', ['jslint', 'coffeelint']);
 
 gulp.task('default', ['lint', 'test-all-coverage']);
 
-/* jshint ignore:end */
