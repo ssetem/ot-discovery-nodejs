@@ -8,7 +8,7 @@ class Utils
     MAX_BACKOFF = 10 * 1000
     fn().catch (e)=>
       if times < 1
-        Promise.reject(e)
+        throw e
       else
         Promise.delay(backoff).then =>
           newBackoff = Math.min(backoff * 2, MAX_BACKOFF)

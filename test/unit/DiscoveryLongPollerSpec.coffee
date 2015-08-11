@@ -5,6 +5,7 @@ Utils           = require("#{srcDir}/Utils")
 nock            = require "nock"
 _               = require "lodash"
 sinon = require "sinon"
+Promise = require "bluebird"
 
 describe "DiscoveryLongPoller", ->
 
@@ -14,7 +15,15 @@ describe "DiscoveryLongPoller", ->
 
     @logger =
       log: () ->
-    @serverList = new ServerList @logger
+
+    @discoveryServer = "http://discover-server"
+
+    @serverList =
+      getRandom: sinon.spy () =>
+        Promise.resolve @discoveryServer
+
+      dropServer: sinon.spy()
+
     @announcementIndex =
       processUpdate: sinon.spy()
 
@@ -22,26 +31,34 @@ describe "DiscoveryLongPoller", ->
       notifyError: sinon.spy()
       notifyWatchers: sinon.spy()
 
-    @reconnect = sinon.spy()
-
-    @discoveryLongPoller = new DiscoveryLongPoller testServiceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
-
-    @discoveryServer = "http://discover-server"
-    @serverList.addServers [@discoveryServer]
+    @discoveryLongPoller = new DiscoveryLongPoller testServiceName, @serverList, @announcementIndex, @discoveryNotifier
 
   afterEach ->
     nock.cleanAll()
 
   describe "start polling", ->
-    it "starts polling with a server", ->
-      @discoveryLongPoller.schedulePoll = sinon.spy()
+    it "starts polling with a server", (done) ->
+      @discoveryLongPoller.schedulePoll = done
       @discoveryLongPoller.startPolling()
-      expect(@discoveryLongPoller.schedulePoll.called).to.be.ok
 
-    it "calls reconnect without a server", ->
-      @serverList.dropServer @discoveryServer
+    it "reschedules a poll", (done) ->
+      @announcementIndex.index = 1
+      watch = nock(@discoveryServer)
+        .get("/watch?since=2&clientServiceType=#{testServiceName}")
+        .times(2)
+        .reply(200)
+
+      # we don't need to increment the since here because we never update
+      # announcement index as we replace handleResponse
+      sinon.spy(@discoveryLongPoller, 'schedulePoll')
+
+      @discoveryLongPoller.handleResponse = () =>
+        if watch.isDone()
+          expect(@discoveryLongPoller.schedulePoll.callCount).to.equal 2
+          @discoveryLongPoller.stopPolling()
+          done()
+
       @discoveryLongPoller.startPolling()
-      expect(@reconnect.called).to.be.ok
 
   it "stop polls", (done) ->
     this.timeout(500)
@@ -55,6 +72,7 @@ describe "DiscoveryLongPoller", ->
         , 1000
 
     @discoveryLongPoller.poll()
+
     setTimeout () =>
       @discoveryLongPoller.stopPolling()
       process.nextTick () ->
@@ -72,12 +90,11 @@ describe "DiscoveryLongPoller", ->
         .get("/watch?since=2&clientServiceType=#{testServiceName}")
         .reply(200)
 
-      @discoveryLongPoller.schedulePoll = () ->
+      @discoveryLongPoller.poll().then () =>
         expect(@announcementIndex.processUpdate.called).to.be.ok
         expect(@discoveryNotifier.notifyWatchers.called).to.be.ok
         done()
-
-      @discoveryLongPoller.poll()
+      .catch done
 
     it "calls nothing if 204", (done) ->
       @announcementIndex.index = 1
@@ -88,9 +105,9 @@ describe "DiscoveryLongPoller", ->
       @announcementIndex.processUpdate = () ->
         done new Error('should not be called')
 
-      @discoveryLongPoller.schedulePoll = done
-
-      @discoveryLongPoller.poll()
+      @discoveryLongPoller.poll().then () ->
+        done()
+      .catch done
 
     it "drops the server if bad", (done) ->
       @announcementIndex.index = 1
@@ -98,18 +115,10 @@ describe "DiscoveryLongPoller", ->
         .get("/watch?since=2&clientServiceType=#{testServiceName}")
         .reply(500)
 
-      @discoveryLongPoller.poll()
-      @discoveryNotifier.notifyError = () =>
-        expect(@serverList.isEmpty).to.be.ok
+      @discoveryLongPoller.poll().then () =>
+        expect(@serverList.dropServer.called).to.be.ok
         done()
-
-    it "reschedules a poll", (done) ->
-      @announcementIndex.index = 1
-      nock(@discoveryServer)
-        .get("/watch?since=2&clientServiceType=#{testServiceName}")
-        .reply(204)
-      @discoveryLongPoller.schedulePoll = done
-      @discoveryLongPoller.poll()
+      .catch done
 
     it "always uses the next index", (done) ->
       @announcementIndex.index = 100

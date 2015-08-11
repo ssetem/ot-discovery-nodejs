@@ -2,6 +2,7 @@ Promise = require "bluebird"
 Errors = require "./Errors"
 Utils = require "./Utils"
 ServerList = require "./ServerList"
+DiscoveryConnector = require "./DiscoveryConnector"
 _ = require "lodash"
 request = Promise.promisify require("request")
 
@@ -10,7 +11,18 @@ module.exports = class DiscoveryAnnouncer
   constructor: (@logger, @announcementHost) ->
     @_announcedRecords = {}
     @HEARTBEAT_INTERVAL_MS = 10 * 1000
-    @serverList = new ServerList @logger
+    @connector = new DiscoveryConnector @announcementHost, null, @logger
+    @serverList = new ServerList @logger, @connect
+
+  connect: () =>
+    @connector.connect()
+      .then (update) =>
+        servers = _.chain(update.updates)
+          .where({serviceType:"discovery"})
+          .pluck("serviceUri")
+          .value()
+
+        @serverList.addServers servers
 
   pingAllAnnouncements: () =>
     Promise.settle _.map(@_announcedRecords, @announce)
@@ -22,7 +34,7 @@ module.exports = class DiscoveryAnnouncer
 
   announce: (announcement) =>
     announcement.announcementId or= Utils.generateUUID()
-    @getServer()
+    @serverList.getRandom()
       .then (server) =>
         url = server + "/announcement"
         @logger.log "debug", "Announcing to ${url}" + JSON.stringify(announcement)
@@ -46,32 +58,8 @@ module.exports = class DiscoveryAnnouncer
     @_announcedRecords[announcement.announcementId] = announcement
     announcement
 
-  getServer: Promise.method () ->
-    server = @serverList.getRandom()
-    if server
-      server
-    else
-      url = "http://#{@announcementHost}/watch"
-      request
-        url:url
-        json:true
-      .spread (response, body) =>
-        servers = _.chain(body.updates)
-          .where({serviceType:"discovery"})
-          .pluck("serviceUri")
-          .value()
-
-        @serverList.addServers servers
-
-        returnedServer = @serverList.getRandom()
-
-        if not returnedServer
-          throw new Error("watch returned no servers")
-
-        returnedServer
-
   unannounce: (announcement) ->
-    @getServer().then (server) =>
+    @serverList.getRandom().then (server) =>
       url = "#{server}/announcement/#{announcement.announcementId}"
       request
         url: url

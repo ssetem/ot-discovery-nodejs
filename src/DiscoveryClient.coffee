@@ -52,10 +52,10 @@ class DiscoveryClient
 
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
-    @serverList = new ServerList @logger
+    @serverList = new ServerList @logger, @reconnect
     @announcementIndex = new AnnouncementIndex @serverList
     @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger
-    @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect
+    @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier
 
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
       new DiscoveryAnnouncer @logger, host
@@ -67,6 +67,9 @@ class DiscoveryClient
     Utils.delegateMethods @, @announcementIndex, [
       "find", "findAll"
     ]
+
+    @RETRY_TIMES = 10
+    @RETRY_BACKOFF = 1
 
   connect: (callback) =>
     @discoveryConnector.connect()
@@ -80,8 +83,11 @@ class DiscoveryClient
         throw e
       .nodeify callback, {spread: true}
 
-  reconnect: (callback) =>
-    @connect(callback)
+  reconnect: () ->
+    Utils.promiseRetry () =>
+      @discoveryConnector.connect()
+        .then @saveUpdates
+    , @RETRY_TIMES, @RETRY_BACKOFF
 
   stopAnnouncementHeartbeat: () =>
     _.invoke @_discoveryAnnouncers, "stopAnnouncementHeartbeat"

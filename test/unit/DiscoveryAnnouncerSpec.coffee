@@ -17,12 +17,18 @@ describe "DiscoveryAnnouncer", ->
     @announcer = new DiscoveryAnnouncer @logger, @discoveryHost
 
     @discoAnnouncements =
+      fullUpdate: true
       updates: [
         {
           announcementId:"disco"
           serviceType : "discovery"
           serviceUri  : @discoveryServer
-        }
+        },
+        {
+          announcementId:"other"
+          serviceType : "other"
+          serviceUri  : "foobar"
+        },
       ]
 
     @announcement = {
@@ -30,6 +36,19 @@ describe "DiscoveryAnnouncer", ->
       serviceType : "my-new-service",
       serviceUri  : "http://my-new-service:8080"
     }
+
+  describe "connect", ->
+    it "calls connector.connect and plucks disco only", (done) ->
+      watch =
+        nock("http://#{@discoveryHost}")
+          .get('/watch')
+          .reply(200, @discoAnnouncements)
+
+      @announcer.connect().then () =>
+        discoServers = [@discoveryServer]
+        expect(@announcer.serverList.servers).to.deep.equal(discoServers)
+        watch.done()
+        done()
 
   describe "announce", ->
     it "announce() success", (done) ->

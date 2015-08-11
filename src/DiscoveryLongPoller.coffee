@@ -1,60 +1,60 @@
 Promise        = require "bluebird"
 Errors         = require "./Errors"
 Utils          = require "./Utils"
-request        = Promise.promisify require("request")
+request = require "request"
 
 class DiscoveryLongPoller
+  constructor: (@serviceName, @serverList, @announcementIndex, @discoveryNotifier) ->
 
-  constructor:(@serviceName, @serverList, @announcementIndex, @discoveryNotifier, @reconnect)->
-
-  startPolling:()=>
+  startPolling: () =>
     return if @shouldBePolling
     @shouldBePolling = true
     @schedulePoll()
 
-  stopPolling:()->
+  stopPolling: () =>
     @shouldBePolling = false
     @currentRequest?.abort()
 
-  schedulePoll:()=>
+  schedulePoll: () =>
     return unless @shouldBePolling
-    if @serverList.isEmpty()
-      @reconnect()
-    else
-      @poll()
+    @poll().then @schedulePoll
 
-  poll:() =>
-    @server = @serverList.getRandom()
-    @nextIndex = @announcementIndex.index + 1
-    url = "#{@server}/watch?since=#{@nextIndex}" + if @serviceName?  then "&clientServiceType=#{@serviceName}" else ""
-    @currentRequest = request
-      url:url
-      json:true
-    .spread @handleResponse
-    .catch @handleError
-    .finally () =>
-      @schedulePoll()
-      @currentRequest = null
-
-  handleError:(error) =>
-    return unless @shouldBePolling
-    @serverList.dropServer(@server)
-    @discoveryNotifier.notifyError(error)
+  poll: () =>
+    @serverList.getRandom()
+      .then (server) =>
+        @nextIndex = @announcementIndex.index + 1
+        url = "#{server}/watch?since=#{@nextIndex}" + if @serviceName?  then "&clientServiceType=#{@serviceName}" else ""
+        # we have to hand promisify here so we can grab the request object
+        # for aborting purposes
+        new Promise (resolve, reject) =>
+          @currentRequest = request
+            url:url
+            json:true
+          , (err, response, body) =>
+            if err
+              reject err
+            else
+              resolve [response, body]
+        .spread @handleResponse
+        .catch (error) =>
+          @serverList.dropServer @server
+          @discoveryNotifier.notifyError error
+        .finally () =>
+          @currentRequest = null
 
   handleResponse: (response, body) =>
     return unless @shouldBePolling
     #no new updates
     unless response?.statusCode
-      @handleError(new Error("Could not connect to #{@server}"))
+      throw new Error "Could not connect to #{response.request.url.http}"
     else if response.statusCode is 204
       return
     #bad status code
     else if response.statusCode isnt 200
-      error = new Error("Bad status code " + response.statusCode + " from watch: " + response)
-      @handleError(error)
+      error = new Error "Bad status code " + response.statusCode + " from watch: " + response
+      throw new Error error
     else
       @announcementIndex.processUpdate body
       @discoveryNotifier.notifyWatchers body
-
 
 module.exports = DiscoveryLongPoller
