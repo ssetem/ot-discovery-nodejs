@@ -24,24 +24,24 @@ _ = require "lodash"
 
 class DiscoveryClient
   constructor:(@host, announcementHosts, homeRegionName, serviceName, @options) ->
-    _.each arguments, (arg) =>
-      if typeof arg == "object" and not Array.isArray arg
-        @options = arg
-
-    if @options?.apiv2Strict
-      unless Array.isArray announcementHosts
-        throw new  Error "announcementHosts must be an array of hostnames(strings)."
-      unless typeof homeRegionName == "string"
-        throw new  Error "homeRegionName must be a valid string."
-      unless typeof serviceName == "string"
-        throw new  Error "serviceName must be a valid string."
+    unless @options?
+      if typeof announcementHosts == "object" and not Array.isArray announcementHosts
+        @options = announcementHosts
 
     @_announcementHosts = if Array.isArray announcementHosts then announcementHosts else [@host]
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
+    if @options?.apiv2Strict
+      unless Array.isArray announcementHosts # strict mode - checking announcementHosts even after massaging @_announcementHosts
+        throw new  Error "announcementHosts must be an array of hostnames(strings)."
+      unless typeof @_homeRegionName == "string"
+        throw new  Error "homeRegionName must be a valid string."
+      unless typeof @_serviceName == "string"
+        throw new  Error "serviceName must be a valid string."
+
     checkHostName = (hostname) ->
-      if hostname.indexOf("http://") > -1
+      if hostname.indexOf("http://") != -1
         throw new Error "host/announcementhost should not contain http:// - use direct host name"
 
     checkHostName @host

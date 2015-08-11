@@ -50,11 +50,11 @@ describe "DiscoveryClient", ->
       ).to.throw 'announcementHosts must be an array of hostnames(strings).'
 
       expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1'], options
+        discoClient = new DiscoveryClient "hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options
       ).to.throw 'homeRegionName must be a valid string.'
 
       expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname', options
+        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname',{notAGoodParam:''}, options
       ).to.throw 'serviceName must be a valid string.'
 
       expect(() ->
