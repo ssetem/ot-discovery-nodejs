@@ -17,19 +17,18 @@ module.exports = class DiscoveryAnnouncer
   connect: () =>
     @connector.connect()
       .then (update) =>
-        servers = _.chain(update.updates)
-          .where({serviceType:"discovery"})
-          .pluck("serviceUri")
+        servers = _.chain update.updates
+          .where {serviceType: "discovery"}
+          .pluck "serviceUri"
           .value()
-
         @serverList.addServers servers
 
   pingAllAnnouncements: () =>
     Promise.settle _.map(@_announcedRecords, @announce)
-      .then(Utils.groupPromiseInspections)
+      .then Utils.groupPromiseInspections
       .then (resultGroups) =>
-        if resultGroups.rejected?.length > 0
-          @logger.log "error", "#{resultGroups.rejected?.length} announcements failed"
+        if resultGroups.rejected.length > 0
+          @logger.log "error", "#{resultGroups.rejected.length} announcements failed"
         resultGroups.fulfilled
 
   announce: (announcement) =>
@@ -50,7 +49,7 @@ module.exports = class DiscoveryAnnouncer
           throw error
 
   handleResponse: (response, body) =>
-    unless response?.statusCode is 201
+    unless response.statusCode is 201
       throw new Error("During announce, bad status code #{response.statusCode}:#{JSON.stringify(body)}")
 
     announcement = body
