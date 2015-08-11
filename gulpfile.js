@@ -2,7 +2,6 @@
 'use strict';
 
 //mocha required options*****************
-require('babel/register');
 require('should');
 //***************************************
 
@@ -18,7 +17,6 @@ var minimist = require('minimist');
 var _ = require('lodash');
 var coffeelint = require('gulp-coffeelint');
 var jshint = require('gulp-jshint');
-var gulpif = require('gulp-if');
 
 var defaultPaths = {
   scripts: ['src/**/*.coffee', 'src/**/*.js'],
@@ -41,18 +39,16 @@ function createFilteredPaths(normalPaths, toFilterPaths) {
   }));
 }
 
-function filterPaths(filetype, args) {
-  var paths = [];
-  _.each(arguments, function(arg) {
-    _.each(arg, function(path) {
-      if (path.indexOf(filetype) > 0)
-        paths.push(path);
-    });
-  });
-  return paths;
+function filterPaths(filetype, pathObject) {
+  return _.filter(
+    _.flatten(pathObject.scripts, pathObject.tests),
+    function(path) {
+      return path.indexOf(filetype) > 0;
+    }
+  );
 }
 
-function test(gulp, path, opts) {
+function test(path, opts) {
   opts = opts || {};
 
   var mochaOpts = minimist(process.argv.slice(2), {
@@ -68,14 +64,8 @@ function test(gulp, path, opts) {
     .pipe(mocha(mochaOpts));
 }
 
-var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
-  //checking to see if we have any coffeescript files, then we gotta load up gci instead of babel
-  if (JSON.stringify(paths).indexOf('.coffee') > -1) {
-    istanbul = require('gulp-coffee-istanbul');
-  } else {
-    require('babel/register');
-    istanbul = require('gulp-istanbul');
-  }
+var coverageTest = function(cb, paths, mochaOpts) {
+  istanbul = require('gulp-coffee-istanbul');
 
   var testsPaths = createFilteredPaths(paths.tests, paths.noCoverageTests);
 
@@ -86,9 +76,8 @@ var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
     })) // Force `require` to return covered files
     .pipe(istanbul.hookRequire()) // Force `require` to return covered files
     .on('finish', function() {
-      var doCoverage = !skipCoverage;
-      test(gulp, testsPaths, mochaOpts)
-        .pipe(gulpif(doCoverage,
+      test(testsPaths, mochaOpts)
+        .pipe(
           istanbul.writeReports({
             dir: paths.coverage,
             reportOpts: {
@@ -96,30 +85,30 @@ var coverageTest = function(cb, paths, mochaOpts, skipCoverage) {
             },
             reporters: ['text', 'text-summary', 'json', 'html', 'teamcity']
           })
-        ))
-        .pipe(gulpif(doCoverage,
+        )
+        .pipe(
           coverageEnforcer({
             thresholds: defaultCoverageThresholds,
             coverageDirectory: paths.coverage,
             rootDirectory: ''
           })
-        ))
+        )
         .on('finish', cb)
-        .once('error', function() {
-          process.exit(1);
-        })
-        .once('end', function() {
-          process.exit();
-        });
+        .on('error', cb);
     });
-}
+};
+
+gulp.task('test', function() {
+  require('coffee-script/register');
+  return test(defaultPaths.tests);
+});
 
 gulp.task('test-all-coverage', function(cb) {
   coverageTest(cb, defaultPaths);
 });
 
 gulp.task('coffeelint', function() {
-  var src = filterPaths(".coffee", defaultPaths.scripts, defaultPaths.tests);
+  var src = filterPaths('.coffee', defaultPaths);
   gulp.src(src)
     .pipe(coffeelint({
       "max_line_length": {
@@ -127,23 +116,19 @@ gulp.task('coffeelint', function() {
       }
     }))
     .pipe(coffeelint.reporter())
-    .pipe(coffeelint.reporter('fail'))
+    .pipe(coffeelint.reporter('fail'));
 });
 
 gulp.task('jslint', function() {
-  var src = filterPaths(".js", defaultPaths.scripts, defaultPaths.tests);
+  var src = filterPaths('.js', defaultPaths);
   return gulp.src(src)
     .pipe(jshint())
     .pipe(jshint.reporter())
     .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('default', ['jslint', 'coffeelint', 'test-all-coverage']);
-
 gulp.task('lint', ['jslint', 'coffeelint']);
 
-gulp.task('test', function(cb) {
-  coverageTest(cb, defaultPaths, null, true);
-});
+gulp.task('default', ['lint', 'test-all-coverage']);
 
 /* jshint ignore:end */
