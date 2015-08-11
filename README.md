@@ -14,14 +14,25 @@ usage:
 
 ``` javascript
 //constructor 
-//DiscoveryClient(host, announcementHosts, homeRegionName, serviceName, options)
+/* DiscoveryClient(host, announcementHosts, homeRegionName, serviceName, options) 
+ * @param = {String} host The hostname to the discovery server.
+ * @param {Array} [annoucementHosts] Either asingle announcement host string or an array of announcement host names (for announcing in multiple disco regions).  If not provided will use host. 
+ * @param {string} [homeRegionName] The name of the region you will be hosted in.
+ * @param {String} [serviceName] The name of the service you will announce as.
+ * @param {Object} [options] Options argument that takes the following:
+ *      {
+ *        logger: { log: function(level, message){}},
+ *        apiv2Strict: true/[false]
+ *      }
+ * @returns {Object} Returns a discovery client object.
+ */
 
 var discovery = require("ot-discovery");
 var disco = new discovery('discovery-server.mydomain.com', ['discovery-server.mydomain.com', 'discovery-server.otherdomain.com'],
   'homeDiscoRegion', 'myServiceName', { /* options */});
 
 //alternatively the original v1 constructor will continue to work (but will not utilize apiv2 features, mostly multi region announce)
-// THIS WILL BE DEPRECATED EVENTUALLY AND ALL CLIENTS SHOULD BE USING 2.0 CONSTRUCTOR ARGUMENTS GOING FORWARD.  
+// This may be eventually deprecated so please consider using the v2 constructor arguments instead.
 var disco = new discovery("discovery-server.mydomain.com");
 
 ```
