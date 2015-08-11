@@ -13,14 +13,15 @@ usage:
 
 
 ``` javascript
-//constructor 
+//constructor
 /* DiscoveryClient(host, announcementHosts, homeRegionName, serviceName,
- *   options) 
+ *   options)
  * @param = {String} host The hostname to the discovery server.
  * @param {Array} [annoucementHosts] An array of announcement host names
  *   multiple for announcing in multiple disco regions.
  *   If not provided will use host.
- *   Please include hostname in the announcement hosts.
+ *   Host is not announced to by design.  Explicity include the discovery
+ *     server in the announcementHosts if you wish to announce to it.
  *
  * @param {string} [homeRegionName] The name of hosted region your sevice is in
  * @param {String} [serviceName] The name of the service you will announce as.
@@ -74,14 +75,14 @@ var disco = new discovery('discovery-server.mydomain.com',
 var that = this;
 
 disco.connect(function(err, host, servers){
-  //Please note that your http server must be up and responding to requests
-  //before announcing to a discovery server or you will be rejected
+  //Announce will error unless the endpoint specified in serviceUri responds
+  // to OPTION / with a valid response
   disco.announce({
     "serviceType":"myServiceType",
     "serviceUri":"http://1.1.1.1:3"
   }, function(err, announcedItemLeases){
     //announcedItemLease is an array that MUST not be modified.
-    console.log("We announced our service!", announcedItems);
+    console.log("We announced our service!", announcedItemLeases);
     //You should store these items (and do NOT modify them) somewhere
     // if you plan to unannouce your announcements.
     that._announcedItemLeases = announcedItemLeases
@@ -100,18 +101,21 @@ API Documentation
  *      serviceType:'myServiceTypeName',
  *      serviceUri:'http://myuri.com'
  *   }
- * @param {function(err, announcedItemLeases )} callback Node style callback
+ * @param {function(err, announcedItemLeases)} callback Node style callback
  *   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED)
  *     if you plan to use unannounce.
  *
  * @returns {Promise} Returns a promise object
+ *
+ * NOTE: Announce will error unless the endpoint specified in serviceUri responds
+ *   to OPTION / with a valid response
  */
 
-  DiscoveryClient.prototype.unannounce = function(announcements, callback) {}
+  DiscoveryClient.prototype.unannounce = function(announcedItemLeases, callback) {}
 /*
- * @param = {Array} announcements - announcement array directly from 
+ * @param = {Array} announcedItemLeases - announcement array directly from 
  *   DiscoveryClient.announce callback - MUST NOT BE MODIFIED- INCLUDING ORDER!
- * @param {function(err, announcedItemLeases )} callback Node style callback
+ * @param {function(err)} callback Node style callback
  *
  * @returns {Promise} Returns a promise object
  */
