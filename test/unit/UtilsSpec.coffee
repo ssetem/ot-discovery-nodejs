@@ -1,49 +1,35 @@
-Utils   = require("#{srcDir}/Utils")
-Promise = require("bluebird")
+Utils   = require "#{srcDir}/Utils"
+Promise = require "bluebird"
 
 describe "Utils", ->
 
   beforeEach ->
 
-
   it "Utils should exist", ->
     expect(Utils).to.exist
 
-
-  it "promiseRetry() - fail", (done)->
+  it "promiseRetry() - fail", (done) ->
     callCount = 0
-    fn = ()->
+    fn = () ->
       callCount++
-      Promise.reject("Error:#{callCount}")
+      Promise.reject "Error:#{callCount}"
 
-    Utils.promiseRetry(fn, 4, 1).catch (e)->
-      expect(e).to.equal("Error:5")
+    Utils.promiseRetry(fn, 4, 1).catch (e) ->
+      expect(e).to.equal "Error:5"
       done()
 
-  it "promiseRetry() - success", (done)->
+  it "promiseRetry() - success", (done) ->
     callCount = 0
-    fn = ()->
+    fn = () ->
       callCount++
       if callCount < 10
-        Promise.reject("Error:#{callCount}")
+        Promise.reject "Error:#{callCount}"
       else
-        Promise.resolve("success:#{callCount}")
+        Promise.resolve "success:#{callCount}"
 
-    Utils.promiseRetry(fn, Infinity, 1).then (result)->
-      expect(result).to.equal("success:10")
+    Utils.promiseRetry(fn, Infinity, 1).then (result) ->
+      expect(result).to.equal "success:10"
       done()
-
-  it "delegateMethods", ->
-    delegate = {
-      foo:(@fooArgs...)=>
-    }
-
-    target = {
-
-    }
-    Utils.delegateMethods(target, delegate, ["foo"])
-    target.foo(1,2,3)
-    expect(@fooArgs).to.deep.equal [1,2,3]
 
   it "groupPromiseInspections()", (done)->
     promises = [

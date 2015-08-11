@@ -4,9 +4,9 @@ _       = require "lodash"
 
 class Utils
 
-  promiseRetry:(fn, times=Infinity, backoff=500)->
+  promiseRetry: (fn, times, backoff) ->
     MAX_BACKOFF = 10 * 1000
-    fn().catch (e)=>
+    fn().catch (e) =>
       if times < 1
         throw e
       else
@@ -16,12 +16,6 @@ class Utils
 
   generateUUID:()->
     uuid.v4()
-
-  delegateMethods:(target, delegate, methods)->
-    for method in methods
-      do (method)->
-        target[method] = (args...)->
-          delegate[method].apply(delegate, args)
 
   groupPromiseInspections:(inspections)->
     reducer = (acc, inspection)->
