@@ -33,32 +33,33 @@ _ = require "lodash"
 
 class DiscoveryClient
   constructor: (@host, announcementHosts, homeRegionName, serviceName, @options) ->
-    if @options?.apiv2Strict
-      unless Array.isArray announcementHosts
-        errmsg = "announcementHosts must be an array."
-      unless typeof homeRegionName == "string"
-        errmsg = "homeRegionName must be a valid string."
-      unless typeof serviceName == "string"
-        errmsg = "serviceName must be a valid string."
+    arglength = arguments.length
+    unless (arglength >= 1 and arglength <= 2) or (arglength >= 4 and arglength <= 5)
+      throw new Error "Incorrect number of parameters: #{arglength}, DiscoveryClient expects 1(+1) or 4(+1)"
 
-      if errmsg
-        throw new Error errmsg
-
-    if Array.isArray announcementHosts
-      @_announcementHosts = announcementHosts
-    else
-      @options = if (announcementHosts is Object)? then announcementHosts else @options
+    if not @options and typeof announcementHosts == "object" and not Array.isArray announcementHosts
+      @options = announcementHosts
       @_announcementHosts = [@host]
+    else
+      @_announcementHosts = announcementHosts
 
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
+    if arguments.length >= 4
+      unless Array.isArray announcementHosts # strict mode - checking announcementHosts even after massaging @_announcementHosts
+        throw new  Error "announcementHosts must be an array of hostnames(strings)."
+      unless typeof @_homeRegionName == "string"
+        throw new  Error "homeRegionName must be a valid string."
+      unless typeof @_serviceName == "string"
+        throw new  Error "serviceName must be a valid string."
+
     checkHostName = (hostname) ->
-      if hostname.indexOf("http://") > 0
-        throw new Error "announcementHost should not contain http:// - use direct host name"
+      if hostname.indexOf("http://") != -1
+        throw new Error "host/announcementhost should not contain http:// - use direct host name"
 
     checkHostName @host
-    _.forEach @_announcementHosts, checkHostName
+    _.each @_announcementHosts, checkHostName
 
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
@@ -70,16 +71,20 @@ class DiscoveryClient
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
       new DiscoveryAnnouncer @logger, host
 
-    Utils.delegateMethods @, @discoveryNotifier, [
-      "onUpdate", "onError"
-    ]
-
-    Utils.delegateMethods @, @announcementIndex, [
-      "find", "findAll"
-    ]
-
     @RETRY_TIMES = 10
     @RETRY_BACKOFF = 1
+
+  onUpdate: (fn) ->
+    @discoveryNotifier.onUpdate fb
+
+  onError: (fn) ->
+    @discoveryNotifier.onError fn
+
+  find: (service) ->
+    @announcementIndex.find service
+
+  findAll: (service) ->
+    @announcementIndex.findAll service
 
   connect: (callback) =>
     @discoveryConnector.connect()

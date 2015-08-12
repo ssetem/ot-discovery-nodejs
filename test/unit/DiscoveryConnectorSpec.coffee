@@ -41,7 +41,7 @@ describe "DiscoveryConnector", ->
       }
 
   afterEach ->
-    nock.cleanAll();
+    nock.cleanAll()
 
   describe "connect", ->
     it "fails from catch", (done) ->
@@ -57,7 +57,7 @@ describe "DiscoveryConnector", ->
           .get("/watch")
           .reply(500, "Simulated server error")
       @connector.connect()
-        .catch (e) =>
+        .catch (e) ->
           expect(e).to.be.ok
           done()
 
@@ -67,7 +67,7 @@ describe "DiscoveryConnector", ->
           .get("/watch")
           .reply(500, {fullUpdate:false})
       @connector.connect()
-        .catch (e) =>
+        .catch (e) ->
           expect(e).to.be.ok
           done()
 

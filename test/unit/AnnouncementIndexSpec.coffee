@@ -11,16 +11,12 @@ describe "AnnouncementIndex", ->
     @sampleAnnouncements = [
       {
         "announcementId":"a1",
-        "staticAnnouncement":false,
-        "announceTime":"2015-03-30T18:26:52.178Z",
         "serviceType":"discovery",
         "serviceUri":"http://1.1.1.1:2"
         "feature":"test"
       },
       {
         "announcementId":"a2",
-        "staticAnnouncement":false,
-        "announceTime":"2015-03-30T18:26:52.178Z",
         "serviceType":"myservice",
         "serviceUri":"http://1.1.1.1:2"
       }
@@ -152,8 +148,6 @@ describe "AnnouncementIndex multi region", ->
       @sampleAnnouncements = [
         {
           "announcementId":"a1",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"discovery",
           "serviceUri":"http://1.1.1.1:2"
           "feature":"test",
@@ -161,56 +155,42 @@ describe "AnnouncementIndex multi region", ->
         },
         {
           "announcementId":"a2",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"myservice",
           "serviceUri":"http://1.1.1.1:3"
           "environment": api2testHosts.announceHosts[0]
         },
         {
           "announcementId":"a2b",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"myservice",
           "serviceUri":"http://99.99.99.99:3"
           "environment": api2testHosts.announceHosts[1]
         },
         {
           "announcementId":"a3",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"nonlocalservice",
           "serviceUri":"http://99.99.99.99:4"
           "environment": api2testHosts.announceHosts[1]
         },
         {
           "announcementId":"a4a",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"tonsofservers",
           "serviceUri":"http://1.1.1.1:1"
           "environment": api2testHosts.announceHosts[0]
         },
         {
           "announcementId":"a4b",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"tonsofservers",
           "serviceUri":"http://1.1.1.1:2"
           "environment": api2testHosts.announceHosts[0]
         },
         {
           "announcementId":"a4c",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"tonsofservers",
           "serviceUri":"http://1.1.1.1:3"
           "environment": api2testHosts.announceHosts[0]
         },
         {
           "announcementId":"a4d",
-          "staticAnnouncement":false,
-          "announceTime":"2015-03-30T18:26:52.178Z",
           "serviceType":"tonsofservers",
           "serviceUri":"http://1.1.1.9:3"
           "environment": api2testHosts.announceHosts[1]
