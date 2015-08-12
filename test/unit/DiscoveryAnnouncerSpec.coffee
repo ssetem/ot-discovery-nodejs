@@ -71,7 +71,8 @@ describe "DiscoveryAnnouncer", ->
         serviceType: "test"
         serviceUri: "test"
       .then (result) ->
-        expect(result).to.have.property('announcementId').to.be.ok
+        expect(result).to.have.property('announcementId')
+          .to.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)
         done()
 
     it "announce() success", (done) ->
