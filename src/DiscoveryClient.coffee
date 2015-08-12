@@ -24,7 +24,6 @@ _ = require "lodash"
 # @param {Object} [options] Options argument that takes the following:
 #      {
 #        logger: { log: function(level, message){}},
-#        apiv2Strict: true/[false]
 #      }
 # @returns {Object} Returns a discovery client object.
 #
