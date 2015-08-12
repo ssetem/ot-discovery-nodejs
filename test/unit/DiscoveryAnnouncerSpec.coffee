@@ -51,6 +51,30 @@ describe "DiscoveryAnnouncer", ->
         done()
 
   describe "announce", ->
+    it "sets a uuid if not there", (done) ->
+      watch =
+        nock("http://#{@discoveryHost}")
+          .get('/watch')
+          .reply(200, @discoAnnouncements)
+
+      success =
+        nock(@discoveryServer)
+          .post('/announcement')
+          .reply (uri, requestBody) ->
+            announcementRequest = JSON.parse requestBody
+            expect(announcementRequest.serviceType).to.equal "test"
+            expect(announcementRequest.serviceUri).to.equal "test"
+            expect(announcementRequest.announcementId).to.be.ok
+            [201, announcementRequest]
+
+      @announcer.announce
+        serviceType: "test"
+        serviceUri: "test"
+      .then (result) ->
+        expect(result).to.have.property('announcementId')
+          .to.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)
+        done()
+
     it "announce() success", (done) ->
       watch =
         nock("http://#{@discoveryHost}")

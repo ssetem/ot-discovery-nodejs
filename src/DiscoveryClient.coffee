@@ -61,16 +61,20 @@ class DiscoveryClient
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
       new DiscoveryAnnouncer @logger, host
 
-    Utils.delegateMethods @, @discoveryNotifier, [
-      "onUpdate", "onError"
-    ]
-
-    Utils.delegateMethods @, @announcementIndex, [
-      "find", "findAll"
-    ]
-
     @RETRY_TIMES = 10
     @RETRY_BACKOFF = 1
+
+  onUpdate: (fn) ->
+    @discoveryNotifier.onUpdate fb
+
+  onError: (fn) ->
+    @discoveryNotifier.onError fn
+
+  find: (service) ->
+    @announcementIndex.find service
+
+  findAll: (service) ->
+    @announcementIndex.findAll service
 
   connect: (callback) =>
     @discoveryConnector.connect()

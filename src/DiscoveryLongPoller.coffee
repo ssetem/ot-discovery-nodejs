@@ -45,9 +45,7 @@ class DiscoveryLongPoller
   handleResponse: (response, body) =>
     return unless @shouldBePolling
     #no new updates
-    unless response?.statusCode
-      throw new Error "Could not connect to #{response.request.url.http}"
-    else if response.statusCode is 204
+    if response.statusCode is 204
       return
     #bad status code
     else if response.statusCode isnt 200

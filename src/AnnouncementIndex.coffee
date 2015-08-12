@@ -1,57 +1,56 @@
 _ = require "lodash"
 
-
 class AnnouncementIndex
 
-  constructor:(@serverList) ->
+  constructor: (@serverList) ->
     #use the getter... not the direct private member!
     @_announcements = {}
 
     @discoveryServers = []
     @index = -1
 
-  processUpdate:(update) ->
+  processUpdate: (update) ->
     if update.fullUpdate
       @clearAnnouncements()
 
-    @setIndex(update.index)
-    @removeAnnouncements(update.deletes)
-    @addAnnouncements(update.updates)
+    @setIndex update.index
+    @removeAnnouncements update.deletes
+    @addAnnouncements update.updates
     @computeDiscoveryServers()
 
-  removeAnnouncements:(ids=[]) ->
+  removeAnnouncements: (ids) ->
     @_announcements = _.omit(@_announcements, ids)
 
-  addAnnouncements:(announcements=[])->
+  addAnnouncements: (announcements) ->
     @_announcements = _.extend @_announcements,
       _.indexBy(announcements, "announcementId")
     
-
-  getAnnouncements:() =>
+  getAnnouncements: () ->
     @_announcements
 
-  clearAnnouncements:() ->
+  clearAnnouncements: () ->
     @_announcements = {}
 
-  setIndex:(@index) =>
+  setIndex: (@index) ->
 
-  computeDiscoveryServers:() ->
-    @discoveryServers = _.chain(@_announcements)
-      .where({serviceType:"discovery"})
-      .pluck("serviceUri")
+  computeDiscoveryServers: () ->
+    @discoveryServers = _.chain @_announcements
+      .where
+        serviceType:"discovery"
+      .pluck "serviceUri"
       .value()
-    @serverList.addServers(@discoveryServers)
+    @serverList.addServers @discoveryServers
 
-  getDiscoveryServers:() ->
+  getDiscoveryServers: () ->
     @discoveryServers
 
-  serviceTypePredicate:(serviceType, announcement) ->
+  serviceTypePredicate: (serviceType, announcement) ->
     serviceType in [
       announcement.serviceType
       "#{announcement.serviceType}:#{announcement.feature}"
     ]
 
-  findAll:(predicate, discoverRegion) =>
+  findAll: (predicate, discoverRegion) ->
     unless _.isFunction predicate
       predicate = @serviceTypePredicate.bind @, predicate
 
@@ -69,7 +68,7 @@ class AnnouncementIndex
       .pluck "serviceUri"
       .value()
 
-  find:(predicate) ->
+  find: (predicate) ->
     _.sample @findAll(predicate)
 
 module.exports = AnnouncementIndex

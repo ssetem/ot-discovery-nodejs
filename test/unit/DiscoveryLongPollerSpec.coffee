@@ -41,6 +41,12 @@ describe "DiscoveryLongPoller", ->
       @discoveryLongPoller.schedulePoll = done
       @discoveryLongPoller.startPolling()
 
+    it "starting polling twice has no effect", ->
+      @discoveryLongPoller.schedulePoll = sinon.spy()
+      @discoveryLongPoller.startPolling()
+      @discoveryLongPoller.startPolling()
+      expect(@discoveryLongPoller.schedulePoll.callCount).to.equal 1
+
     it "reschedules a poll", (done) ->
       @announcementIndex.index = 1
       watch = nock(@discoveryServer)
@@ -66,10 +72,8 @@ describe "DiscoveryLongPoller", ->
     @announcementIndex.index = 1
     longPoll = nock(@discoveryServer)
       .get("/watch?since=2&clientServiceType=#{testServiceName}")
-      .reply () ->
-        setTimeout () ->
-          done new Error('not called')
-        , 1000
+      .delay(200)
+      .reply(204)
 
     @discoveryLongPoller.poll()
 
@@ -114,6 +118,17 @@ describe "DiscoveryLongPoller", ->
       nock(@discoveryServer)
         .get("/watch?since=2&clientServiceType=#{testServiceName}")
         .reply(500)
+
+      @discoveryLongPoller.poll().then () =>
+        expect(@serverList.dropServer.called).to.be.ok
+        done()
+      .catch done
+
+    it "drops if it excepts", (done) ->
+      @announcementIndex.index = 1
+      nock(@discoveryServer)
+        .get("/watch?since=2&clientServiceType=#{testServiceName}")
+        .replyWithError('some socket error')
 
       @discoveryLongPoller.poll().then () =>
         expect(@serverList.dropServer.called).to.be.ok
