@@ -33,21 +33,6 @@ describe "Utils", ->
       expect(result).to.equal("success:10")
       done()
 
-
-
-  it "invokeAll()", ->
-    str = ""
-
-    fn = (args...)->
-      str += args.join("")
-
-    fns = [fn, fn]
-
-    Utils.invokeAll(fns, "a", "b")
-
-    expect(str).to.equal "abab"
-
-
   it "delegateMethods", ->
     delegate = {
       foo:(@fooArgs...)=>
