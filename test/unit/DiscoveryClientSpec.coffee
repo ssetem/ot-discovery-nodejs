@@ -37,39 +37,39 @@ describe "DiscoveryClient", ->
             log: () ->
         })
 
+      @expectThrow = (params, throwMessage) ->
+        expect(() ->
+          something = new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
+        ).to.throw(throwMessage)
+
+      @expectNotToThrow = (params) ->
+        expect(() ->
+          something = new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
+        ).to.not.throw()
+
       @announcers = @discoveryClient._discoveryAnnouncers
 
-    it "throws exceptions when using v1 api with apiv2Strict option", ->
-      options = 
+    it "throws exceptions on bad constructor parameters", ->
+      options =
         logger:
           log: ()->
-        apiv2Strict: true
 
-      expect(() ->
-        discoClient = new DiscoveryClient "hostname", options
-      ).to.throw 'announcementHosts must be an array of hostnames(strings).'
-
-      expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options
-      ).to.throw 'homeRegionName must be a valid string.'
-
-      expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname',{notAGoodParam:''}, options
-      ).to.throw 'serviceName must be a valid string.'
-
-      expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1'],'myhostname','myServiceName', options
-      ).to.not.throw()
+      @expectNotToThrow ["hostname", options]
+      @expectThrow ["hostname", "badannounce", null, null], 'announcementHosts must be an array of hostnames(strings).'
+      @expectThrow ["hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options], 'homeRegionName must be a valid string.'
+      @expectThrow ["hostname", ['host1'],'myhostname',{notAGoodParam:''}, options], 'serviceName must be a valid string.'
+      @expectNotToThrow ["hostname", ['host1'],'myhostname','myServiceName', options]
+      @expectThrow [], 'Incorrect number of parameters: 0, DiscoveryClient expects 1(+1) or 4(+1)'
+      @expectThrow [null,null,null], 'Incorrect number of parameters: 3, DiscoveryClient expects 1(+1) or 4(+1)'
+      @expectThrow [null,null,null,null,null,null], 'Incorrect number of parameters: 6, DiscoveryClient expects 1(+1) or 4(+1)'
 
 
     it "throws exception with bad hostnames", ->
-       expect(() ->
-        discoClient = new DiscoveryClient "http://hostname", ['host1'],'myhostname','myServiceName', {}
-      ).to.throw 'host/announcementhost should not contain http:// - use direct host name'
+      @expectThrow ["http://hostname", ['host1'],'myhostname','myServiceName', {}],
+        'host/announcementhost should not contain http:// - use direct host name'
 
-      expect(() ->
-        discoClient = new DiscoveryClient "hostname", ['host1', 'http://badhostname'],'myhostname','myServiceName', {}
-      ).to.throw 'host/announcementhost should not contain http:// - use direct host name'
+      @expectThrow ["hostname", ['host1', 'http://badhostname'],'myhostname','myServiceName', {}],
+        'host/announcementhost should not contain http:// - use direct host name'
 
 
     it "creates announcers in each region", ->

@@ -17,13 +17,16 @@ _ = require "lodash"
   # serviceName = 'myServiceName' - needed for discovery apiv2 - will be sent in the watch request to tell server we are a api2 client
   # options = {
   #   logger = console.log...etc
-  #   apiv2Strict = true - will force apiv2 constructor params and throw errors if not met, otherwise allow apiv1 fallback
   # }
   # NOTE: there is some interface backwards campatabiltiy with the disco api v1**
   # so (host, options) is valid. and will result in the old behaviour
 
 class DiscoveryClient
   constructor:(@host, announcementHosts, homeRegionName, serviceName, @options) ->
+    arglength = arguments.length
+    unless (arglength >= 1 and arglength <= 2) or (arglength >= 4 and arglength <= 5)
+      throw new Error "Incorrect number of parameters: #{arglength}, DiscoveryClient expects 1(+1) or 4(+1)"
+
     unless @options?
       if typeof announcementHosts == "object" and not Array.isArray announcementHosts
         @options = announcementHosts
@@ -32,7 +35,7 @@ class DiscoveryClient
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
-    if @options?.apiv2Strict
+    if arguments.length >= 4
       unless Array.isArray announcementHosts # strict mode - checking announcementHosts even after massaging @_announcementHosts
         throw new  Error "announcementHosts must be an array of hostnames(strings)."
       unless typeof @_homeRegionName == "string"
