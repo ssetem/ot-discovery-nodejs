@@ -8,16 +8,26 @@ Utils = require "./Utils"
 Promise = require "bluebird"
 _ = require "lodash"
 
-# host = 'http://discovery.discoservice.com'
+
+# constructor
+# DiscoveryClient(host, announcementHosts, homeRegionName, serviceName,
+#   options)
+# @param = {String} host The hostname to the discovery server.
+# @param {Array} [annoucementHosts] An array of announcement host names
+#   multiple for announcing in multiple disco regions.
+#   If not provided will use host.
+#   Host is not announced to by design.  Explicity include the discovery
+#     server in the announcementHosts if you wish to announce to it.
 #
-# announcementHosts - ['http://discovery_server2.org', 'http://discovery_server3.org']
+# @param {string} [homeRegionName] The name of hosted region your sevice is in
+# @param {String} [serviceName] The name of the service you will announce as.
+# @param {Object} [options] Options argument that takes the following:
+#      {
+#        logger: { log: function(level, message){}}
+#      }
+# @returns {Object} Returns a discovery client object.
 #
-# homeRegionName = 'something-prod-etc' - used to set environement field in announce posts
-# serviceName = 'myServiceName' - needed for discovery apiv2 - will be sent in the watch request to tell server we are a api2 client
-# options = {
-#   logger = console.log...etc
-#   apiv2Strict = true - will force apiv2 constructor params and throw errors if not met, otherwise allow apiv1 fallback
-# }
+#
 # NOTE: there is some interface backwards campatabiltiy with the disco api v1**
 # so (host, options) is valid. and will result in the old behaviour
 
@@ -100,19 +110,42 @@ class DiscoveryClient
   startAnnouncementHeartbeat: () =>
     _.invoke @_discoveryAnnouncers, "startAnnouncementHeartbeat"
 
+
+ # @param = {Object} announcement - announcement object:
+ #   {
+ #      serviceType:'myServiceTypeName',
+ #      serviceUri:'http://myuri.com'
+ #   }
+ # @param {function(err, announcedItemLeases)} callback Node style callback
+ #   Please note that annoucedItemLeases is required to hold onto (UNMODIFIED)
+ #     if you plan to use unannounce.
+ #
+ # @returns {Promise} Returns a promise object that resolves with the itemLeases.
+ #
+ # NOTE: Announce will error unless the endpoint specified in serviceUri responds
+ #   to OPTION / with a valid response
+ #
   announce: (announcement, callback) =>
     if @_homeRegionName
       announcement.environment = @_homeRegionName
 
     announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       announcer.announce announcement
+
     Promise.all(announcedPromises).catch (e) =>
       @discoveryNotifier.notifyError(e)
       throw e
     .nodeify(callback)
 
-  unannounce: (announcements, callback) =>
-    unannouncedPromises = _.map _.zip(@_discoveryAnnouncers, announcements),
+
+ # @param = {Array} announcedItemLeases - announcement array directly from
+ #   DiscoveryClient.announce callback - MUST NOT BE MODIFIED- INCLUDING ORDER!
+ # @param {function(err)} callback Node style callback
+ #
+ # @returns {Promise} Returns a promise object that has an empty resolve.
+ #
+  unannounce: (announcedItemLeases, callback) =>
+    unannouncedPromises = _.map _.zip(@_discoveryAnnouncers, announcedItemLeases),
       (announcementPair) ->
         announcementPair[0].unannounce announcementPair[1]
 
