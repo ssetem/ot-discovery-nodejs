@@ -4,11 +4,26 @@ Promise = require "bluebird"
 _ = require "lodash"
 
 describe "DiscoveryClient", ->
+  before ->
+    @createDisco = (params) ->
+      return new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
 
+    @expectThrow = (params, throwMessage) ->
+      expect(() => 
+        @createDisco(params)
+      ).to.throw(throwMessage)
+
+    @expectNotToThrow = (params) ->
+      disco = null
+      expect(() => 
+        disco = @createDisco params 
+      ).to.not.throw()
+      disco
+  
   describe "v1 api facading", ->
     it "supports just a host and options", ->
       options = {}
-      client = new DiscoveryClient 'anything', options
+      client = @expectNotToThrow ['anything', options]
       expect(client.host).to.equal('anything')
       expect(client._announcementHosts).to.deep.equal(['anything'])
       expect(client.homeRegionName).to.not.be.ok
@@ -16,28 +31,51 @@ describe "DiscoveryClient", ->
       expect(client.options).to.equal(options)
 
   it "uses logger if not passed", ->
-    client = new DiscoveryClient 'anything'
+    client = @expectNotToThrow 'anything'
     expect(client.logger).to.equal(require("#{srcDir}/ConsoleLogger"))
 
   it "uses options logger if passed", ->
     myLogger =
       log: () ->
 
-    client = new DiscoveryClient 'anything', {logger: myLogger}
+    client = @expectNotToThrow ['anything', {logger: myLogger}]
     expect(client.logger).to.equal(myLogger)
 
   describe "v2 api", ->
     beforeEach ->
-      @discoveryClient = Promise.promisifyAll new DiscoveryClient(
+      @discoveryClient = Promise.promisifyAll @expectNotToThrow [
         api2testHosts.discoverRegionHost,
         api2testHosts.announceHosts,
         'homeregion',
         testServiceName, {
           logger:
             log: () ->
-        })
+        }]
 
       @announcers = @discoveryClient._discoveryAnnouncers
+
+    it "throws exceptions on bad constructor parameters", ->
+      options =
+        logger:
+          log: ()->
+
+      @expectNotToThrow ["hostname", options]
+      @expectThrow ["hostname", "badannounce", null, null], 'announcementHosts must be an array of hostnames(strings).'
+      @expectThrow ["hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options], 'homeRegionName must be a valid string.'
+      @expectThrow ["hostname", ['host1'],'myhostname',{notAGoodParam:''}, options], 'serviceName must be a valid string.'
+      @expectNotToThrow ["hostname", ['host1'],'myhostname','myServiceName', options]
+      @expectThrow [], 'Incorrect number of parameters: 0, DiscoveryClient expects 1(+1) or 4(+1)'
+      @expectThrow [null,null,null], 'Incorrect number of parameters: 3, DiscoveryClient expects 1(+1) or 4(+1)'
+      @expectThrow [null,null,null,null,null,null], 'Incorrect number of parameters: 6, DiscoveryClient expects 1(+1) or 4(+1)'
+
+
+    it "throws exception with bad hostnames", ->
+      @expectThrow ["http://hostname", ['host1'],'myhostname','myServiceName', {}],
+        'host/announcementhost should not contain http:// - use direct host name'
+
+      @expectThrow ["hostname", ['host1', 'http://badhostname'],'myhostname','myServiceName', {}],
+        'host/announcementhost should not contain http:// - use direct host name'
+
 
     it "creates announcers in each region", ->
       expect(@announcers).to.have.length(2)
@@ -223,6 +261,6 @@ describe "DiscoveryClient", ->
       expect(@discoveryClient.announcementIndex.findAll.called).to.be.ok
 
     it "make sure discovery can be promisified", ->
-      expect(@discoveryClient.connectAsync).to.exist
-      expect(@discoveryClient.announceAsync).to.exist
-      expect(@discoveryClient.unannounceAsync).to.exist
+      expect(@discoveryClient).to.respondTo 'connectAsync'
+      expect(@discoveryClient).to.respondTo 'announceAsync'
+      expect(@discoveryClient).to.respondTo 'unannounceAsync'
