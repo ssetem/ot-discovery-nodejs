@@ -23,7 +23,7 @@ _ = require "lodash"
 # @param {String} [serviceName] The name of the service you will announce as.
 # @param {Object} [options] Options argument that takes the following:
 #      {
-#        logger: { log: function(level, message){}},
+#        logger: { log: function(level, message){}}
 #      }
 # @returns {Object} Returns a discovery client object.
 #
@@ -126,10 +126,14 @@ class DiscoveryClient
 
     announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
       announcer.announce announcement
+<<<<<<< HEAD
     Promise.all(announcedPromises).catch (e) =>
       @discoveryNotifier.notifyError(e)
       throw e
     .nodeify(callback)
+=======
+    Promise.all(announcedPromises).nodeify(callback)
+>>>>>>> 011f4c4ca35a5f543d16670427ff93880ffa6615
 
 
  # @param = {Array} announcedItemLeases - announcement array directly from
