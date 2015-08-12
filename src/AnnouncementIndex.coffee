@@ -2,7 +2,7 @@ _ = require "lodash"
 
 class AnnouncementIndex
 
-  constructor: (@serverList) ->
+  constructor: () ->
     #use the getter... not the direct private member!
     @_announcements = {}
 
@@ -39,7 +39,6 @@ class AnnouncementIndex
         serviceType:"discovery"
       .pluck "serviceUri"
       .value()
-    @serverList.addServers @discoveryServers
 
   getDiscoveryServers: () ->
     @discoveryServers

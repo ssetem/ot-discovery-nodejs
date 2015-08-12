@@ -17,7 +17,9 @@ class ServerList
   getRandom: () ->
     @pickServer()
       .catch () =>
-        @connect().then @pickServer
+        @connect().then (servers) =>
+          @addServers servers
+          @pickServer()
 
   addServers: (servers) ->
     @logger.log 'info', 'Syncing discovery servers ' + servers

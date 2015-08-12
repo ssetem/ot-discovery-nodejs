@@ -43,8 +43,7 @@ describe "ServerList", ->
 
     it "calls connect to get more servers when there is not", (done) ->
       @serverList.connect = sinon.spy () =>
-        @serverList.addServers @servers
-        Promises.resolve()
+        Promises.resolve @servers
 
       @serverList.getRandom()
         .then (server) =>

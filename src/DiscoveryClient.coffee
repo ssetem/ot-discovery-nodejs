@@ -1,8 +1,7 @@
-DiscoveryConnector = require "./DiscoveryConnector"
 AnnouncementIndex = require "./AnnouncementIndex"
 DiscoveryAnnouncer = require "./DiscoveryAnnouncer"
 DiscoveryNotifier = require "./DiscoveryNotifier"
-DiscoveryLongPoller = require "./DiscoveryLongPoller"
+DiscoveryWatcher = require "./DiscoveryWatcher"
 ServerList = require "./ServerList"
 Utils = require "./Utils"
 Promise = require "bluebird"
@@ -64,9 +63,8 @@ class DiscoveryClient
     @logger = @options?.logger or require "./ConsoleLogger"
     @discoveryNotifier = new DiscoveryNotifier @logger
     @serverList = new ServerList @logger, @reconnect
-    @announcementIndex = new AnnouncementIndex @serverList
-    @discoveryConnector = new DiscoveryConnector @host, @_serviceName, @logger
-    @discoveryLongPoller = new DiscoveryLongPoller @_serviceName, @serverList, @announcementIndex, @discoveryNotifier
+    @announcementIndex = new AnnouncementIndex
+    @discoveryWatcher = new DiscoveryWatcher
 
     @_discoveryAnnouncers = _.map @_announcementHosts, (host) =>
       new DiscoveryAnnouncer @logger, host
@@ -87,10 +85,12 @@ class DiscoveryClient
     @announcementIndex.findAll service
 
   connect: (callback) =>
-    @discoveryConnector.connect()
-      .then(@saveUpdates)
-      .then(@longPollForUpdates)
-      .then(@startAnnouncementHeartbeat)
+    @discoveryWatcher.watch @host
+      .then @saveUpdates
+      .then () =>
+        @polling = true
+        @schedulePoll()
+      .then @startAnnouncementHeartbeat
       .then () =>
         return [@host, @serverList.servers]
       .catch (e) =>
@@ -100,8 +100,10 @@ class DiscoveryClient
 
   reconnect: () ->
     Utils.promiseRetry () =>
-      @discoveryConnector.connect()
-        .then @saveUpdates
+      @discoveryWatcher.watch @host
+        .then (updates) =>
+          @saveUpdates(updates)
+          @announcementIndex.getDiscoveryServers()
     , @RETRY_TIMES, @RETRY_BACKOFF
 
   stopAnnouncementHeartbeat: () =>
@@ -160,13 +162,26 @@ class DiscoveryClient
   #
   disconnect: () ->
     @stopAnnouncementHeartbeat()
-    @discoveryLongPoller.stopPolling()
+    @polling = false
+    @discoveryWatcher.abort()
 
   saveUpdates: (update) =>
     @announcementIndex.processUpdate(update)
+    @serverList.addServers @announcementIndex.getDiscoveryServers()
 
-  longPollForUpdates: () =>
-    @discoveryLongPoller.startPolling()
+  schedulePoll: () =>
+    return unless @polling
+    @serverList.getRandom()
+      .then (server) =>
+        @discoveryWatch.watch server, @serviceName, @announcementIndex.index + 1
+          .then (update) =>
+            if response.statusCode isnt 204
+              @saveUpdates update
+              @discoveryNotifier.notifyWatchers body
+          .catch (error) =>
+            @serverList.dropServer server
+            @discoveryNotifier.notifyError error
+      .finally @schedulePoll
 
   getServers: () ->
     @serverList.servers
