@@ -246,7 +246,7 @@ describe "DiscoveryClient", ->
     it "dispose stops everything", ->
       @discoveryClient.stopAnnouncementHeartbeat = sinon.spy()
       @discoveryClient.discoveryLongPoller.stopPolling = sinon.spy()
-      @discoveryClient.dispose()
+      @discoveryClient.disconnect()
       expect(@discoveryClient.stopAnnouncementHeartbeat.called).to.be.ok
       expect(@discoveryClient.discoveryLongPoller.stopPolling.called).to.be.ok
 

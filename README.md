@@ -117,4 +117,12 @@ API Documentation
  *
  * @returns {Promise} Returns a promise object that has an empty resolve.
  */
+
+ DiscoveryClient.prototype.disconnect = function() {}
+/* disconnect - will shut down announcement heartbeats and stop any long polls
+ *    that are currently active or queued.  This is critical if you plan to
+ *    start and stop discovery or you might be left with open connections. 
+ *
+ */
+
 ```

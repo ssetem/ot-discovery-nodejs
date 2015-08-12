@@ -153,8 +153,12 @@ class DiscoveryClient
       @discoveryNotifier.notifyError(e)
       throw e
     .nodeify(callback)
-
-  dispose: () ->
+  
+  # disconnect - will shut down announcement heartbeats and stop any long polls
+  #    that are currently active or queued.  This is critical if you plan to
+  #    start and stop discovery or you might be left with open connections.
+  #
+  disconnect: () ->
     @stopAnnouncementHeartbeat()
     @discoveryLongPoller.stopPolling()
 
