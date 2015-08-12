@@ -8,16 +8,20 @@ Utils = require "./Utils"
 Promise = require "bluebird"
 _ = require "lodash"
 
-# host = 'http://discovery.discoservice.com'
+
+# constructor
+# DiscoveryClient(host, announcementHosts, homeRegionName, serviceName, options)
+# @param = {String} host The hostname to the discovery server.
+# @param {Array} [annoucementHosts] Either asingle announcement host string or an array of announcement host names (for announcing in multiple disco regions).  If not provided will use host.
+# @param {string} [homeRegionName] The name of the region you will be hosted in.
+# @param {String} [serviceName] The name of the service you will announce as.
+# @param {Object} [options] Options argument that takes the following:
+#      {
+#        logger: { log: function(level, message){}},
+#        apiv2Strict: true/[false]
+#      }
+# @returns {Object} Returns a discovery client object.
 #
-# announcementHosts - ['http://discovery_server2.org', 'http://discovery_server3.org']
-#
-# homeRegionName = 'something-prod-etc' - used to set environement field in announce posts
-# serviceName = 'myServiceName' - needed for discovery apiv2 - will be sent in the watch request to tell server we are a api2 client
-# options = {
-#   logger = console.log...etc
-#   apiv2Strict = true - will force apiv2 constructor params and throw errors if not met, otherwise allow apiv1 fallback
-# }
 # NOTE: there is some interface backwards campatabiltiy with the disco api v1**
 # so (host, options) is valid. and will result in the old behaviour
 
