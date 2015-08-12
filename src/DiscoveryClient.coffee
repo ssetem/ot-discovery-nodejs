@@ -27,11 +27,12 @@ class DiscoveryClient
     unless (arglength >= 1 and arglength <= 2) or (arglength >= 4 and arglength <= 5)
       throw new Error "Incorrect number of parameters: #{arglength}, DiscoveryClient expects 1(+1) or 4(+1)"
 
-    unless @options?
-      if typeof announcementHosts == "object" and not Array.isArray announcementHosts
-        @options = announcementHosts
+    if not @options and typeof announcementHosts == "object" and not Array.isArray announcementHosts
+      @options = announcementHosts
+      @_announcementHosts = [@host]
+    else
+      @_announcementHosts = announcementHosts
 
-    @_announcementHosts = if Array.isArray announcementHosts then announcementHosts else [@host]
     @_homeRegionName = homeRegionName || null
     @_serviceName = serviceName || null
 
