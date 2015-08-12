@@ -27,8 +27,7 @@ usage:
  * @param {String} [serviceName] The name of the service you will announce as.
  * @param {Object} [options] Options argument that takes the following:
  *      {
- *        logger: { log: function(level, message){}},
- *        apiv2Strict: true/[false]
+ *        logger: { log: function(level, message){}}
  *      }
  * @returns {Object} Returns a discovery client object.
  */
