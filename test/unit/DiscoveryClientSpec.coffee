@@ -85,9 +85,9 @@ describe "DiscoveryClient", ->
         }]
 
       @discoveryClient.discoveryConnector.connect = sinon.spy () ->
-        return Promise.resolve(updates)
+        Promise.resolve updates
 
-      sinon.spy(@discoveryClient.announcementIndex, 'processUpdate')
+      sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
       @discoveryClient.longPollForUpdates = sinon.spy()
       @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
       @discoveryClient.connect (err, host, servers) =>
@@ -104,6 +104,67 @@ describe "DiscoveryClient", ->
         expect(servers).to.deep.equal(['a.disco'])
 
         done()
+
+    it "connect notifies and errors on failure", (done) ->
+      @discoveryClient.discoveryConnector.connect = sinon.spy () ->
+        Promise.reject new Error('badness')
+
+      @discoveryClient.connect (err) ->
+        expect(err).to.be.ok
+        done()
+
+    it "reconnects connects and saves update (but does nothing else)", (done) ->
+      updates =
+        fullUpdate: true
+        index: 1
+        updates: [{
+          serviceType: 'discovery',
+          serviceUri: 'a.disco'
+        }]
+
+      @discoveryClient.discoveryConnector.connect = sinon.spy () ->
+        Promise.resolve updates
+
+      sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
+      @discoveryClient.longPollForUpdates = sinon.spy()
+      @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
+      @discoveryClient.reconnect()
+        .then () =>
+          expect(@discoveryClient.announcementIndex.processUpdate.calledWith(updates))
+            .to.be.ok
+          expect(@discoveryClient.longPollForUpdates.called)
+            .to.not.be.ok
+          expect(@discoveryClient.startAnnouncementHeartbeat.called)
+            .to.not.be.ok
+
+          done()
+        .catch(done)
+
+    it "reconnect will try multiple times when connect rejects", (done) ->
+      updates =
+        fullUpdate: true
+        index: 1
+        updates: [{
+          serviceType: 'discovery',
+          serviceUri: 'a.disco'
+        }]
+
+      @discoveryClient.discoveryConnector.connect = sinon.spy () =>
+        call = @discoveryClient.discoveryConnector.connect.callCount
+        if call == 1
+          Promise.reject new Error('badness')
+        else
+          Promise.resolve updates
+
+      sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
+      @discoveryClient.longPollForUpdates = sinon.spy()
+      @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
+
+      @discoveryClient.reconnect()
+        .then () =>
+          expect(@discoveryClient.discoveryConnector.connect.callCount).to.equal 2
+          done()
+
 
     it "heartbeat start calls heartbeat on each region", ->
       _.each @announcers, (ann) ->
@@ -133,15 +194,19 @@ describe "DiscoveryClient", ->
         done()
       .catch(done)
 
-    it "announce fails if one announce fails", (done) ->
+    it "announce fails if one announce fails and error watchers", (done) ->
       @announcers[0].announce = sinon.spy (announce) ->
         Promise.resolve(announce)
       @announcers[1].announce = sinon.spy (announce) ->
         Promise.reject new Error('an error')
 
+      errorSpy = sinon.spy()
+      @discoveryClient.onError errorSpy
+
       @discoveryClient.announce({}).then (result) ->
         done new Error('should not get here')
       .catch (err) ->
+        expect(errorSpy.called).to.be.ok
         expect(err).to.be.ok
         done()
 
@@ -158,14 +223,18 @@ describe "DiscoveryClient", ->
         done()
       .catch(done)
 
-    it "unannounce fails if one unannounce fails", (done) ->
+    it "unannounce fails if one unannounce fails and error watchers", (done) ->
       @announcers[0].unannounce = sinon.spy()
       @announcers[1].unannounce = sinon.spy () ->
         Promise.reject new Error('something')
 
+      errorSpy = sinon.spy()
+      @discoveryClient.onError errorSpy
+
       @discoveryClient.unannounce([1,2]).then () ->
         done new Error('should not get here')
-      .catch (err) ->
+      .catch (err) =>
+        expect(errorSpy.called).to.be.ok
         expect(err).to.be.ok
         done()
 
@@ -185,11 +254,6 @@ describe "DiscoveryClient", ->
       @discoveryClient.announcementIndex.findAll = sinon.spy()
       @discoveryClient.findAll("discovery")
       expect(@discoveryClient.announcementIndex.findAll.called).to.be.ok
-
-    it "reconnect just connects", ->
-      @discoveryClient.connect = sinon.spy()
-      @discoveryClient.reconnect()
-      expect(@discoveryClient.connect.called).to.be.ok
 
     it "make sure discovery can be promisified", ->
       expect(@discoveryClient.connectAsync).to.exist
