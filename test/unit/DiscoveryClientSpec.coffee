@@ -4,48 +4,54 @@ Promise = require "bluebird"
 _ = require "lodash"
 
 describe "DiscoveryClient", ->
+  before ->
+    @createDisco = (params) ->
+      return new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
 
+    @expectThrow = (params, throwMessage) ->
+      expect(() => 
+        @createDisco(params)
+      ).to.throw(throwMessage)
+
+    @expectNotToThrow = (params) ->
+      disco = null
+      expect(() => 
+        disco = @createDisco params 
+      ).to.not.throw()
+      disco
+  
   describe "v1 api facading", ->
     it "supports just a host and options", ->
       options = {}
-      client = new DiscoveryClient 'anything', options
+      client = @expectNotToThrow ['anything', options]
       expect(client.host).to.equal('anything')
       expect(client._announcementHosts).to.deep.equal(['anything'])
       expect(client.homeRegionName).to.not.be.ok
       expect(client.serviceName).to.not.be.ok
+      console.log 'CLIENT IS:', client
       expect(client.options).to.equal(options)
 
   it "uses logger if not passed", ->
-    client = new DiscoveryClient 'anything'
+    client = @expectNotToThrow 'anything'
     expect(client.logger).to.equal(require("#{srcDir}/ConsoleLogger"))
 
   it "uses options logger if passed", ->
     myLogger =
       log: () ->
 
-    client = new DiscoveryClient 'anything', {logger: myLogger}
+    client = @expectNotToThrow ['anything', {logger: myLogger}]
     expect(client.logger).to.equal(myLogger)
 
   describe "v2 api", ->
     beforeEach ->
-      @discoveryClient = Promise.promisifyAll new DiscoveryClient(
+      @discoveryClient = Promise.promisifyAll @expectNotToThrow [
         api2testHosts.discoverRegionHost,
         api2testHosts.announceHosts,
         'homeregion',
         testServiceName, {
           logger:
             log: () ->
-        })
-
-      @expectThrow = (params, throwMessage) ->
-        expect(() ->
-          something = new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
-        ).to.throw(throwMessage)
-
-      @expectNotToThrow = (params) ->
-        expect(() ->
-          something = new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
-        ).to.not.throw()
+        }]
 
       @announcers = @discoveryClient._discoveryAnnouncers
 
@@ -256,6 +262,6 @@ describe "DiscoveryClient", ->
       expect(@discoveryClient.announcementIndex.findAll.called).to.be.ok
 
     it "make sure discovery can be promisified", ->
-      expect(@discoveryClient.connectAsync).to.exist
-      expect(@discoveryClient.announceAsync).to.exist
-      expect(@discoveryClient.unannounceAsync).to.exist
+      expect(@discoveryClient).to.respondTo 'connectAsync'
+      expect(@discoveryClient).to.respondTo 'announceAsync'
+      expect(@discoveryClient).to.respondTo 'unannounceAsync'
