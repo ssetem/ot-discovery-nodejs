@@ -51,8 +51,7 @@ options:
   logger: { // a logger object which implements the following signature
     log: function(severity, log){} // severity will be one of info, 
     //debug, error
-  },
-  apiv2Strict: false //set to true to throw on not apiv2 params.
+  }
 }
 ```
 
