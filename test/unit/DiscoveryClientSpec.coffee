@@ -28,7 +28,6 @@ describe "DiscoveryClient", ->
       expect(client._announcementHosts).to.deep.equal(['anything'])
       expect(client.homeRegionName).to.not.be.ok
       expect(client.serviceName).to.not.be.ok
-      console.log 'CLIENT IS:', client
       expect(client.options).to.equal(options)
 
   it "uses logger if not passed", ->
