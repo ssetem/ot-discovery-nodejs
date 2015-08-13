@@ -289,6 +289,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "unannounce - does nothing", (done) ->
       @announcer._announcedRecords = {}
+      # any actual HTTP request here will cause nock to throw an rejection
       @announcer.unannounce(@announcement).then () ->
         done()
       .catch(done)
