@@ -89,3 +89,6 @@ describe "DiscoveryWatcher", ->
     process.nextTick () =>
       @discoveryWatcher.abort()
       done()
+
+  it "abort does nothing if not requesting", () ->
+    @discoveryWatcher.abort()
