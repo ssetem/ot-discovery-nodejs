@@ -255,7 +255,7 @@ describe "DiscoveryAnnouncer", ->
       # in this test, we won't test the server list / watch which is tested
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
-      @announcer.handleResponse {statusCode: 201}, @announcement
+      @announcer._announcedRecords[@announcement.announcementId] = @announcement
 
     it "unannounce - error - rejection", (done) ->
       unannounce =
@@ -283,9 +283,40 @@ describe "DiscoveryAnnouncer", ->
       unannounceRequest = nock(@discoveryServer)
         .delete("/announcement/a1")
         .reply(200)
-      @announcer.unannounce(@announcement).then (result) ->
+      @announcer.unannounce(@announcement).then () ->
         done()
       .catch(done)
+
+    it "unannounce - does nothing", (done) ->
+      @announcer._announcedRecords = {}
+      # any actual HTTP request here will cause nock to throw an rejection
+      @announcer.unannounce(@announcement).then () ->
+        done()
+      .catch(done)
+
+    it "unannounce - fail then success then nothing", (done) ->
+      fail = nock @discoveryServer
+        .delete "/announcement/a1"
+        .reply 500
+
+      success = nock @discoveryServer
+        .delete "/announcement/a1"
+        .reply 200
+
+      @announcer.unannounce(@announcement).then () ->
+        done new Error("should not get here")
+      .catch (e) =>
+        #it was dropped; readd it so we don't have to mock disco-request
+        @announcer.serverList.addServers [@discoveryServer]
+
+        @announcer.unannounce(@announcement)
+          .then () =>
+            @announcer.unannounce(@announcement)
+          .then () ->
+            fail.done()
+            success.done()
+            done()
+          .catch done
 
   describe "heartbeats", () ->
     before () ->
