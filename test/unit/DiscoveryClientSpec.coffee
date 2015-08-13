@@ -1,8 +1,14 @@
 DiscoveryClient = require "#{srcDir}/DiscoveryClient"
 Promise = require "bluebird"
 _ = require "lodash"
+sinon = require "sinon"
 
 describe "DiscoveryClient", ->
+  replaceMethod = (obj, method, fn) ->
+    expect(obj).to.respondTo method
+    fn ?= sinon.spy()
+    obj[method] = fn
+
   before ->
     @createDisco = (params) ->
       return new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
@@ -93,8 +99,8 @@ describe "DiscoveryClient", ->
         Promise.resolve [200, updates]
 
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
-      @discoveryClient.schedulePoll = sinon.spy()
-      @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
+      replaceMethod @discoveryClient, 'schedulePoll'
+      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
       @discoveryClient.connect (err, host, servers) =>
         if err
           return done(err)
@@ -112,7 +118,7 @@ describe "DiscoveryClient", ->
         done()
 
     it "connect notifies and errors on failure", (done) ->
-      @discoveryClient.discoveryWatcher.watch = sinon.spy () ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy () ->
         Promise.reject new Error('badness')
 
       @discoveryClient.connect (err) ->
@@ -120,7 +126,7 @@ describe "DiscoveryClient", ->
         done()
 
     it "connect notifies on bad code", (done) ->
-      @discoveryClient.discoveryWatcher.watch = sinon.spy () ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy () ->
         Promise.resolve [204, {}]
 
       @discoveryClient.connect (err) ->
@@ -136,13 +142,13 @@ describe "DiscoveryClient", ->
           serviceUri: 'a.disco'
         }]
 
-      @discoveryClient.discoveryWatcher.watch = sinon.spy () ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy () ->
         Promise.resolve [200, updates]
 
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
 
-      @discoveryClient.schedulePoll = sinon.spy()
-      @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
+      replaceMethod @discoveryClient, 'schedulePoll'
+      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
       @discoveryClient.reconnect()
         .then (servers) =>
           expect(@discoveryClient.announcementIndex.processUpdate.calledWith(updates))
@@ -164,7 +170,7 @@ describe "DiscoveryClient", ->
           serviceUri: 'a.disco'
         }]
 
-      @discoveryClient.discoveryWatcher.watch = sinon.spy () =>
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy () =>
         call = @discoveryClient.discoveryWatcher.watch.callCount
         if call == 1
           Promise.reject new Error('badness')
@@ -172,8 +178,8 @@ describe "DiscoveryClient", ->
           Promise.resolve [200, updates]
 
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
-      @discoveryClient.schedulePoll = sinon.spy()
-      @discoveryClient.startAnnouncementHeartbeat = sinon.spy()
+      replaceMethod @discoveryClient, 'schedulePoll'
+      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
 
       @discoveryClient.reconnect()
         .then () =>
@@ -182,21 +188,21 @@ describe "DiscoveryClient", ->
 
     it "heartbeat start calls heartbeat on each region", ->
       _.each @announcers, (ann) ->
-        ann.startAnnouncementHeartbeat = sinon.spy()
+        replaceMethod ann, 'startAnnouncementHeartbeat'
       @discoveryClient.startAnnouncementHeartbeat()
       _.each @announcers, (ann) ->
         expect(ann.startAnnouncementHeartbeat.called).to.be.ok
 
     it "heartbeat stop calls heartbeat on each region", ->
       _.each @announcers, (ann) ->
-        ann.stopAnnouncementHeartbeat = sinon.spy()
+        replaceMethod ann, 'stopAnnouncementHeartbeat'
       @discoveryClient.stopAnnouncementHeartbeat()
       _.each @announcers, (ann) ->
         expect(ann.stopAnnouncementHeartbeat.called).to.be.ok
 
     it "announce announces in each region", (done) ->
       _.each @announcers, (ann) ->
-        ann.announce = sinon.spy (announce) ->
+        replaceMethod ann, 'announce', sinon.spy (announce) ->
           Promise.resolve(announce)
       announcement = {}
       @discoveryClient.announce(announcement).then (result) =>
@@ -209,9 +215,9 @@ describe "DiscoveryClient", ->
       .catch(done)
 
     it "announce fails if one announce fails and error watchers", (done) ->
-      @announcers[0].announce = sinon.spy (announce) ->
+      replaceMethod @announcers[0], 'announce', sinon.spy (announce) ->
         Promise.resolve(announce)
-      @announcers[1].announce = sinon.spy (announce) ->
+      replaceMethod @announcers[1], 'announce', sinon.spy (announce) ->
         Promise.reject new Error('an error')
 
       errorSpy = sinon.spy()
@@ -226,7 +232,7 @@ describe "DiscoveryClient", ->
 
     it "unannounce unannounces in each region", (done) ->
       _.each @announcers, (ann) ->
-        ann.unannounce = sinon.spy (a) ->
+        replaceMethod ann, 'unannounce', sinon.spy (a) ->
           Promise.resolve()
 
       @discoveryClient.unannounce([1,2]).then () =>
@@ -238,8 +244,8 @@ describe "DiscoveryClient", ->
       .catch(done)
 
     it "unannounce fails if one unannounce fails and error watchers", (done) ->
-      @announcers[0].unannounce = sinon.spy()
-      @announcers[1].unannounce = sinon.spy () ->
+      replaceMethod @announcers[0], 'unannounce'
+      replaceMethod @announcers[1], 'unannounce', sinon.spy () ->
         Promise.reject new Error('something')
 
       errorSpy = sinon.spy()
@@ -253,19 +259,19 @@ describe "DiscoveryClient", ->
         done()
 
     it "disconnet stops everything", ->
-      @discoveryClient.stopAnnouncementHeartbeat = sinon.spy()
-      @discoveryClient.discoveryWatcher.abort = sinon.spy()
+      replaceMethod @discoveryClient, 'stopAnnouncementHeartbeat'
+      replaceMethod @discoveryClient.discoveryWatcher, 'abort'
       @discoveryClient.disconnect()
       expect(@discoveryClient.stopAnnouncementHeartbeat.called).to.be.ok
       expect(@discoveryClient.discoveryWatcher.abort.called).to.be.ok
 
     it "find calls announcementIndex", ->
-      @discoveryClient.announcementIndex.find = sinon.spy()
+      replaceMethod @discoveryClient.announcementIndex, 'find'
       @discoveryClient.find("discovery")
       expect(@discoveryClient.announcementIndex.find.called).to.be.ok
 
     it "findAll calls announcementIndex", ->
-      @discoveryClient.announcementIndex.findAll = sinon.spy()
+      replaceMethod @discoveryClient.announcementIndex, 'findAll'
       @discoveryClient.findAll("discovery")
       expect(@discoveryClient.announcementIndex.findAll.called).to.be.ok
 
@@ -277,20 +283,20 @@ describe "DiscoveryClient", ->
   describe "polling", ->
     beforeEach () ->
       @discoveryClient = new DiscoveryClient 'ahost'
+      @update =
+        fullUpdate: true
+        index: 1
+        updates: [{
+          serviceType: 'discovery',
+          serviceUri: 'a.disco'
+        }]
 
     it "calls save update and notify when success", (done) ->
       @discoveryClient.serverList.addServers ['a.com']
       @discoveryClient.announcementIndex.index = 100
 
-      @discoveryClient.discoveryWatcher.watch = sinon.spy (server) ->
-        update =
-          fullUpdate: true
-          index: 1
-          updates: [{
-            serviceType: 'discovery',
-            serviceUri: 'a.disco'
-          }]
-        Promise.resolve [200, update]
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy (server) =>
+        Promise.resolve [200, @update]
 
       notifyWatch = sinon.spy()
       @discoveryClient.onUpdate notifyWatch
@@ -308,7 +314,7 @@ describe "DiscoveryClient", ->
       @discoveryClient.serverList.addServers ['a.com']
       @discoveryClient.announcementIndex.index = 100
 
-      @discoveryClient.discoveryWatcher.watch = sinon.spy (server, seviceName, index) ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy (server, seviceName, index) ->
         expect(index).to.equal 101
         Promise.resolve [204, {}]
 
@@ -320,7 +326,7 @@ describe "DiscoveryClient", ->
     it "drops a bad server and notify errors", (done) ->
       @discoveryClient.serverList.addServers ['a.com']
 
-      @discoveryClient.discoveryWatcher.watch = sinon.spy (server) ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy (server) ->
         Promise.reject 'bad server'
 
       notifyError = sinon.spy()
@@ -335,36 +341,29 @@ describe "DiscoveryClient", ->
         done()
 
     it "calls reconnect when all servers are gone", (done) ->
-      @discoveryClient.discoveryWatcher.watch = sinon.spy (server) ->
+      replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy (server) =>
         if server == 'ahost'
           #reconnect!
-          Promise.resolve [200,
-            fullUpdate: true
-            index: 1
-            updates: [{
-              serviceType: 'discovery',
-              serviceUri: 'a.com'
-            }]
-          ]
-        else if server == 'a.com'
+          Promise.resolve [200, @update]
+        else if server == 'a.disco'
           #rewatch!
           Promise.resolve [204, {}]
         else
-          done new Error('invalid host passed to watch')
+          expect(false, "bad server! " + server).to.be.ok
 
       @discoveryClient.poll().then () =>
-        expect(@discoveryClient.discoveryWatcher.watch.called).to.be.ok
+        expect(@discoveryClient.discoveryWatcher.watch.called, 'watch called').to.be.ok
         done()
       .catch done
 
     it "does nothing unless @polling", ->
-      @discoveryClient.serverList.getRandom = sinon.spy()
+      replaceMethod @discoveryClient.serverList, 'getRandom', sinon.spy()
       @discoveryClient.schedulePoll()
       expect(@discoveryClient.serverList.getRandom.called).to.be.not.ok
 
     it "calls poll when polling", (done) ->
       @discoveryClient.polling = true
-      @discoveryClient.poll = sinon.spy () =>
+      replaceMethod @discoveryClient, 'poll', sinon.spy () =>
         @discoveryClient.polling = false
         done()
         Promise.resolve()
