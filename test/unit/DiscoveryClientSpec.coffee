@@ -205,7 +205,7 @@ describe "DiscoveryClient", ->
         replaceMethod ann, 'announce', sinon.spy (announce) ->
           Promise.resolve announce
       announcement = {}
-      @discoveryClient.announce(announcement).then (result) =>
+      @discoveryClient.announce(announcement).then (result) ->
         expect(result[0]).to.have.property('environment').to.equal 'homeregion'
         done()
       .catch done
@@ -218,7 +218,7 @@ describe "DiscoveryClient", ->
       announcement = {}
       @discoveryClient._homeRegionName = null
 
-      @discoveryClient.announce(announcement).then (result) =>
+      @discoveryClient.announce(announcement).then (result) ->
         expect(result[0]).to.not.have.property 'environment'
         done()
       .catch done
@@ -227,9 +227,11 @@ describe "DiscoveryClient", ->
       _.each @announcers, (ann) ->
         replaceMethod ann, 'announce', sinon.spy (announce) ->
           Promise.resolve(announce)
+
       announcement =
         serviceName: 'service'
         serviceUri: 'foobar.com'
+
       @discoveryClient.announce(announcement).then (lease) =>
         expect(announcement).to.deep.equal {
           serviceName: 'service'
@@ -241,6 +243,8 @@ describe "DiscoveryClient", ->
         _.each @announcers, (ann) ->
           expect(ann.announce.firstCall.args[0].serviceName).to.equal 'service'
           expect(ann.announce.firstCall.args[0].serviceUri).to.equal 'foobar.com'
+          expect(ann.announce.firstCall.args[0]).to.not.have.property 'announcementId'
+
         done()
       .catch(done)
 
