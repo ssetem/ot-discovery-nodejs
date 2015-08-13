@@ -204,13 +204,20 @@ describe "DiscoveryClient", ->
       _.each @announcers, (ann) ->
         replaceMethod ann, 'announce', sinon.spy (announce) ->
           Promise.resolve(announce)
-      announcement = {}
-      @discoveryClient.announce(announcement).then (result) =>
-        expect(result).to.deep.equal([announcement, announcement])
-        expect(@announcers[0].announce.calledWith(announcement)).to.be.ok
-        expect(@announcers[1].announce.calledWith(announcement)).to.be.ok
-        expect(@announcers[0].announce.calledOn(@announcers[0])).to.be.ok
-        expect(@announcers[1].announce.calledOn(@announcers[1])).to.be.ok
+      announcement =
+        serviceName: 'service'
+        serviceUri: 'foobar.com'
+      @discoveryClient.announce(announcement).then (lease) =>
+        expect(announcement).to.deep.equal {
+          serviceName: 'service'
+          serviceUri: 'foobar.com'
+        }
+
+        expect(lease).to.be.ok
+
+        _.each @announcers, (ann) ->
+          expect(ann.announce.firstCall.args[0].serviceName).to.equal 'service'
+          expect(ann.announce.firstCall.args[0].serviceUri).to.equal 'foobar.com'
         done()
       .catch(done)
 
