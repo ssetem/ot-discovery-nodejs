@@ -361,3 +361,11 @@ describe "DiscoveryClient", ->
       @discoveryClient.serverList.getRandom = sinon.spy()
       @discoveryClient.schedulePoll()
       expect(@discoveryClient.serverList.getRandom.called).to.be.not.ok
+
+    it "calls poll when polling", (done) ->
+      @discoveryClient.polling = true
+      @discoveryClient.poll = sinon.spy () =>
+        @discoveryClient.polling = false
+        done()
+        Promise.resolve()
+      @discoveryClient.schedulePoll()
