@@ -91,4 +91,6 @@ describe "DiscoveryWatcher", ->
       done()
 
   it "abort does nothing if not requesting", () ->
-    @discoveryWatcher.abort()
+    expect () =>
+      @discoveryWatcher.abort()
+    .to.not.throw()
