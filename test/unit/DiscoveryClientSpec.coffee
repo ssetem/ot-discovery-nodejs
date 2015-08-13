@@ -200,6 +200,29 @@ describe "DiscoveryClient", ->
       _.each @announcers, (ann) ->
         expect(ann.stopAnnouncementHeartbeat.called).to.be.ok
 
+    it "announce sets the homeRegion if given", (done) ->
+      _.each @announcers, (ann) ->
+        replaceMethod ann, 'announce', sinon.spy (announce) ->
+          Promise.resolve announce
+      announcement = {}
+      @discoveryClient.announce(announcement).then (result) =>
+        expect(result[0]).to.have.property('environment').to.equal 'homeregion'
+        done()
+      .catch done
+
+    it "announce does not set the homeRegion if not given", (done) ->
+      _.each @announcers, (ann) ->
+        replaceMethod ann, 'announce', sinon.spy (announce) ->
+          Promise.resolve announce
+
+      announcement = {}
+      @discoveryClient._homeRegionName = null
+
+      @discoveryClient.announce(announcement).then (result) =>
+        expect(result[0]).to.not.have.property 'environment'
+        done()
+      .catch done
+
     it "announce announces in each region", (done) ->
       _.each @announcers, (ann) ->
         replaceMethod ann, 'announce', sinon.spy (announce) ->
