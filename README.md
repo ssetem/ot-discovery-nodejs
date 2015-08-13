@@ -226,3 +226,7 @@ discoveryClient.disconnect = function()
 ```
 
 This completes synchronously. This disconnects all open requests and cancels all heartbeats.
+
+
+### [Contributing] (CONTRIBUTING.md)
+### [Roadmap] (ROADMAP.md)
