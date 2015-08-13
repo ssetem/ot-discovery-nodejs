@@ -34,9 +34,13 @@ module.exports = class DiscoveryAnnouncer
 
   announce: (announcement) =>
     announcement.announcementId or= Utils.generateUUID()
+    # add the announcement to the announcement records now
+    # even if the post fails, we will retry it as part of pingAllAnnouncements
+    @_announcedRecords[announcement.announcementId] = announcement
     @serverList.getRandom()
       .then (server) =>
         url = server + "/announcement"
+
         @logger.log "debug", "Announcing to ${url}" + JSON.stringify(announcement)
 
         request
@@ -55,7 +59,6 @@ module.exports = class DiscoveryAnnouncer
 
     announcement = body
     @logger.log "info", "Announced as ", JSON.stringify(announcement)
-    @_announcedRecords[announcement.announcementId] = announcement
     announcement
 
   unannounce: (announcement) ->
