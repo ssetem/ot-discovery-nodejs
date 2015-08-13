@@ -9,14 +9,14 @@ describe "DiscoveryClient", ->
       return new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
 
     @expectThrow = (params, throwMessage) ->
-      expect(() => 
+      expect(() =>
         @createDisco(params)
       ).to.throw(throwMessage)
 
     @expectNotToThrow = (params) ->
       disco = null
-      expect(() => 
-        disco = @createDisco params 
+      expect(() =>
+        disco = @createDisco params
       ).to.not.throw()
       disco
   
