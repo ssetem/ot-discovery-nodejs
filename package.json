@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git://github.com/opentable/ot-discovery-nodejs.git"
   },
+  "publishConfig": {
+    "registry": "http://artifactory.otenv.com/artifactory/api/npm/npm-local"
+  },
   "author": "Steven Schlansker",
   "dependencies": {
     "node-uuid": "^1.4.2",
