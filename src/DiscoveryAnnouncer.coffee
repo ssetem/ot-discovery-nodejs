@@ -62,6 +62,9 @@ module.exports = class DiscoveryAnnouncer
     announcement
 
   unannounce: (announcement) ->
+    #if we already unannounced successfully, do nothing.
+    return Promise.resolve() unless @_announcedRecords[announcement.announcementId]
+
     @serverList.getRandom()
       .then (server) =>
         url = "#{server}/announcement/#{announcement.announcementId}"
@@ -74,6 +77,7 @@ module.exports = class DiscoveryAnnouncer
           delete @_announcedRecords[announcement.announcementId]
           @logger.log "info", "Unannounce DELETE '#{url}' " +
             "returned #{response.statusCode}:#{JSON.stringify(body)}"
+          return
         .catch (e) =>
           @serverList.dropServer server
           throw e
