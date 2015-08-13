@@ -1,8 +1,7 @@
 Promise = require "bluebird"
-Errors = require "./Errors"
 Utils = require "./Utils"
 ServerList = require "./ServerList"
-DiscoveryConnector = require "./DiscoveryConnector"
+DiscoveryWatcher = require "./DiscoveryWatcher"
 _ = require "lodash"
 request = Promise.promisify require("request")
 
@@ -11,17 +10,19 @@ module.exports = class DiscoveryAnnouncer
   constructor: (@logger, @announcementHost) ->
     @_announcedRecords = {}
     @HEARTBEAT_INTERVAL_MS = 10 * 1000
-    @connector = new DiscoveryConnector @announcementHost, null, @logger
+    @watcher = new DiscoveryWatcher
     @serverList = new ServerList @logger, @connect
 
   connect: () =>
-    @connector.connect()
-      .then (update) =>
-        servers = _.chain update.updates
-          .where {serviceType: "discovery"}
-          .pluck "serviceUri"
-          .value()
-        @serverList.addServers servers
+    @watcher.watch @announcementHost
+      .spread (statusCode, body) ->
+        if statusCode is 204
+          throw new Error "announce expected a full update"
+        else
+          _.chain body.updates
+            .where {serviceType: "discovery"}
+            .pluck "serviceUri"
+            .value()
 
   pingAllAnnouncements: () =>
     Promise.settle _.map(@_announcedRecords, @announce)
@@ -58,18 +59,21 @@ module.exports = class DiscoveryAnnouncer
     announcement
 
   unannounce: (announcement) ->
-    @serverList.getRandom().then (server) =>
-      url = "#{server}/announcement/#{announcement.announcementId}"
-      request
-        url: url
-        method: "DELETE"
-      .spread (response, body) =>
-        delete @_announcedRecords[announcement.announcementId]
-        @logger.log "info", "Unannounce DELETE '#{url}' " +
-          "returned #{response.statusCode}:#{JSON.stringify(body)}"
-      .catch (e) ->
-        @serverList.dropServer server
-        throw e
+    @serverList.getRandom()
+      .then (server) =>
+        url = "#{server}/announcement/#{announcement.announcementId}"
+        request
+          url: url
+          method: "DELETE"
+        .spread (response, body) =>
+          unless response.statusCode in [200, 204]
+            throw new Error "unable to unannounce bad status code #{response.statusCode}:#{JSON.stringify(body)} #{server}"
+          delete @_announcedRecords[announcement.announcementId]
+          @logger.log "info", "Unannounce DELETE '#{url}' " +
+            "returned #{response.statusCode}:#{JSON.stringify(body)}"
+        .catch (e) =>
+          @serverList.dropServer server
+          throw e
 
   startAnnouncementHeartbeat: () =>
     @stopAnnouncementHeartbeat()

@@ -11,10 +11,10 @@ describe "DiscoveryAnnouncer", ->
     @logger =
       log: sinon.spy()
 
-    @discoveryHost = "discover-host"
+    @discoveryHost = "http://discover-host"
     @discoveryServer = "http://discover-server"
 
-    @announcer = new DiscoveryAnnouncer @logger, @discoveryHost
+    @announcer = new DiscoveryAnnouncer @logger, "discover-host"
 
     @discoAnnouncements =
       fullUpdate: true
@@ -38,22 +38,21 @@ describe "DiscoveryAnnouncer", ->
     }
 
   describe "connect", ->
-    it "calls connector.connect and plucks disco only", (done) ->
+    it "calls watcher.connect and plucks disco only", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
-      @announcer.connect().then () =>
-        discoServers = [@discoveryServer]
-        expect(@announcer.serverList.servers).to.deep.equal(discoServers)
+      @announcer.connect().then (servers) =>
+        expect(servers).to.deep.equal [@discoveryServer]
         watch.done()
         done()
 
   describe "announce", ->
     it "sets a uuid if not there", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -77,7 +76,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() success", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -95,7 +94,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() status code error", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -105,56 +104,66 @@ describe "DiscoveryAnnouncer", ->
           .reply(400, "Simulated error")
 
       @announcer.announce(@announcement)
-        .catch (e) ->
+        .catch (e) =>
           watch.done()
           failure.done()
           expect(e.message).to.equal 'During announce, bad status code 400:"Simulated error"'
-          done()
-
-    it "announce() rejects and removes", (done) ->
-      watch =
-        nock("http://#{@discoveryHost}")
-          .get('/watch')
-          .reply(200, @discoAnnouncements)
-
-      @announcer.announce(@announcement)
-        .catch (e) =>
-          watch.done()
-          expect(e).to.be.ok
           expect(@announcer.serverList.isEmpty).to.be.ok
           done()
 
-    it "announce() bad status code removes server out of rotation", (done) ->
+    it "announce() rejects", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
       failure =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
-          .reply(400, "Simulated error")
+          .replyWithError('rejection')
 
       @announcer.announce(@announcement)
         .catch (e) =>
+          watch.done()
+          failure.done()
+          expect(e).to.be.ok
           expect(@announcer.serverList.isEmpty).to.be.ok
           done()
 
     it "watch fails status code", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(500)
 
       @announcer.announce(@announcement)
         .catch (e) ->
           expect(e).to.be.ok
+          watch.done()
           done()
 
-    it "watch rejects", (done) ->
+    it "watch returns 204 instead of 200", (done) ->
+      watch =
+        nock @discoveryHost
+          .get('/watch')
+          .reply(204)
+
       @announcer.announce(@announcement)
         .catch (e) ->
           expect(e).to.be.ok
+          watch.done()
+          done()
+
+    it "watch rejects", (done) ->
+      watch =
+        nock @discoveryHost
+          .get('/watch')
+          .replyWithError('rejection')
+
+      @announcer.announce(@announcement)
+        .catch (e) ->
+          expect(e).to.be.ok
+          watch.done()
           done()
 
   describe "pingAllAnnouncements", () ->
@@ -210,13 +219,27 @@ describe "DiscoveryAnnouncer", ->
       @announcer.serverList.addServers [@discoveryServer]
       @announcer.handleResponse {statusCode: 201}, @announcement
 
-    it "unannounce - error - no connect", (done) ->
+    it "unannounce - error - rejection", (done) ->
+      unannounce =
+        nock(@discoveryServer)
+          .delete('/announcement/a1')
+          .replyWithError('rejection')
+
       @announcer.unannounce(@announcement).catch (e) ->
         expect(e).to.be.ok
+        unannounce.done()
         done()
 
     it "unannouce - status code - error", (done) ->
-      done()
+      unannounce =
+        nock(@discoveryServer)
+          .delete('/announcement/a1')
+          .reply(500)
+
+      @announcer.unannounce(@announcement).catch (e) ->
+        expect(e).to.be.ok
+        unannounce.done()
+        done()
 
     it "unannounce - success", (done)->
       unannounceRequest = nock(@discoveryServer)

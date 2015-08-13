@@ -3,10 +3,7 @@ sinon = require "sinon"
 
 describe "AnnouncementIndex", ->
   beforeEach ->
-    @serverList =
-      addServers: sinon.spy()
-
-    @announcementIndex = new AnnouncementIndex @serverList
+    @announcementIndex = new AnnouncementIndex
     
     @sampleAnnouncements = [
       {
@@ -55,8 +52,6 @@ describe "AnnouncementIndex", ->
     @announcementIndex.computeDiscoveryServers()
     expect(@announcementIndex.getDiscoveryServers())
       .to.deep.equal [@sampleAnnouncements[1].serviceUri]
-    expect(@serverList.addServers.calledWithMatch([@sampleAnnouncements[1].serviceUri]))
-      .to.be.ok
 
   it "processUpdate - fullUpdate", ->
     @announcementIndex.processUpdate
