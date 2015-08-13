@@ -133,7 +133,9 @@ class DiscoveryClient
       announcement.environment = @_homeRegionName
 
     announcedPromises = _.map @_discoveryAnnouncers, (announcer) ->
-      announcer.announce announcement
+      # we need to clone each announcement so each announcement in each region
+      # gets a new announcementId
+      announcer.announce _.extend({}, announcement)
 
     Promise.all(announcedPromises).catch (e) =>
       @discoveryNotifier.notifyError(e)
