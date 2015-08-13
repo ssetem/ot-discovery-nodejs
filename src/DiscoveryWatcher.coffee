@@ -32,6 +32,9 @@ class DiscoveryWatcher
     .finally () =>
       @currentRequest = null
 
+  abort: () ->
+    @currentRequest?.abort()
+    
   validateResponse: (response, body) ->
     #bad status code
     if response.statusCode in [200, 204]

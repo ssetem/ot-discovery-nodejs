@@ -72,3 +72,20 @@ describe "DiscoveryWatcher", ->
       .catch (e) ->
         watch.done()
         done()
+
+   it "aborts", (done) ->
+    this.timeout 250 # make sure we timeout before the delay
+    watch =
+      nock "http://" + @discoveryServer
+        .get '/watch'
+        .delay 500
+        .reply 200, 'message'
+
+    @discoveryWatcher.watch @discoveryServer
+      .then () ->
+        done 'should not complete'
+      .catch done
+
+    process.nextTick () =>
+      @discoveryWatcher.abort()
+      done()
