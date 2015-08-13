@@ -128,6 +128,7 @@ class DiscoveryClient
  #   to OPTION / with a valid response
  #
   announce: (announcement, callback) =>
+    announcement = _.extend {}, announcement
     if @_homeRegionName
       announcement.environment = @_homeRegionName
 
