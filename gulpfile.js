@@ -16,6 +16,7 @@ var minimist = require('minimist');
 var _ = require('lodash');
 var coffeelint = require('gulp-coffeelint');
 var jshint = require('gulp-jshint');
+var logwarn = require('gulp-logwarn');
 
 var defaultPaths = {
   scripts: ['src/**/*.coffee', 'src/**/*.js'],
@@ -24,6 +25,8 @@ var defaultPaths = {
   coverage: 'coverage/',
   zipCoverage: 'coverage/*'
 };
+
+var logStr = ['console' + '.log'];
 
 var defaultCoverageThresholds = {
   statements: 90,
@@ -39,12 +42,14 @@ function createFilteredPaths(normalPaths, toFilterPaths) {
 }
 
 function filterPaths(filetype, pathObject) {
-  return _.filter(
-    _.flatten(pathObject.scripts, pathObject.tests),
-    function(path) {
-      return path.indexOf(filetype) > 0;
-    }
-  );
+  var array = [];
+  var filterFunc = function(path) {
+    return path.indexOf(filetype) > 0;
+  };
+  array.concat(_.chain(pathObject.scripts)
+    .filter(filterFunc).value());
+  return array.concat(_.chain(pathObject.tests)
+    .filter(filterFunc).value());
 }
 
 function test(path, opts) {
@@ -109,6 +114,7 @@ gulp.task('test-all-coverage', function(cb) {
 gulp.task('coffeelint', function() {
   var src = filterPaths('.coffee', defaultPaths);
   gulp.src(src)
+    .pipe(logwarn(logStr))
     .pipe(coffeelint({
       'max_line_length': {
         'level': 'ignore'
@@ -122,6 +128,7 @@ gulp.task('jslint', function() {
   var src = filterPaths('.js', defaultPaths);
   src.push('gulpfile.js');
   return gulp.src(src)
+    .pipe(logwarn(logStr))
     .pipe(jshint())
     .pipe(jshint.reporter())
     .pipe(jshint.reporter('fail'));
