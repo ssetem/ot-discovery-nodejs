@@ -189,11 +189,4 @@ class DiscoveryClient
             @discoveryNotifier.notifyError error
             throw error
 
-  getServers: () ->
-    @serverList.servers
-
-  getAnnouncements: () ->
-    @announcementIndex.getAnnouncements()
-
-
 module.exports = DiscoveryClient
