@@ -142,6 +142,18 @@ describe "DiscoveryAnnouncer", ->
           watch.done()          
           done()
 
+    it "watch returns 204 instead of 200", (done) ->
+      watch =
+        nock("http://#{@discoveryHost}")
+          .get('/watch')
+          .reply(204)
+ 
+      @announcer.announce(@announcement)
+        .catch (e) ->
+          expect(e).to.be.ok
+          watch.done()          
+          done()
+
     it "watch rejects", (done) ->
       watch =
         nock("http://#{@discoveryHost}")
