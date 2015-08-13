@@ -15,11 +15,14 @@ module.exports = class DiscoveryAnnouncer
 
   connect: () =>
     @watcher.watch @announcementHost
-      .then (body) ->
-        _.chain body.updates
-          .where {serviceType: "discovery"}
-          .pluck "serviceUri"
-          .value()
+      .spread (statusCode, body) ->
+        if statusCode is 204
+          throw new Error "announce expected a full update"
+        else
+          _.chain body.updates
+            .where {serviceType: "discovery"}
+            .pluck "serviceUri"
+            .value()
 
   pingAllAnnouncements: () =>
     Promise.settle _.map(@_announcedRecords, @announce)

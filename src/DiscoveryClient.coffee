@@ -73,7 +73,7 @@ class DiscoveryClient
     @RETRY_BACKOFF = 1
 
   onUpdate: (fn) ->
-    @discoveryNotifier.onUpdate fb
+    @discoveryNotifier.onUpdate fn
 
   onError: (fn) ->
     @discoveryNotifier.onError fn
@@ -86,7 +86,7 @@ class DiscoveryClient
 
   connect: (callback) =>
     @discoveryWatcher.watch @host
-      .then @saveUpdates
+      .spread @saveUpdates
       .then () =>
         @polling = true
         @schedulePoll()
@@ -98,11 +98,11 @@ class DiscoveryClient
         throw e
       .nodeify callback, {spread: true}
 
-  reconnect: () ->
+  reconnect: () =>
     Utils.promiseRetry () =>
       @discoveryWatcher.watch @host
-        .then (updates) =>
-          @saveUpdates(updates)
+        .spread (statusCode, updates) =>
+          @saveUpdates statusCode, updates
           @announcementIndex.getDiscoveryServers()
     , @RETRY_TIMES, @RETRY_BACKOFF
 
@@ -155,7 +155,7 @@ class DiscoveryClient
       @discoveryNotifier.notifyError(e)
       throw e
     .nodeify(callback)
-  
+
   # disconnect - will shut down announcement heartbeats and stop any long polls
   #    that are currently active or queued.  This is critical if you plan to
   #    start and stop discovery or you might be left with open connections.
@@ -165,23 +165,29 @@ class DiscoveryClient
     @polling = false
     @discoveryWatcher.abort()
 
-  saveUpdates: (update) =>
-    @announcementIndex.processUpdate(update)
-    @serverList.addServers @announcementIndex.getDiscoveryServers()
+  saveUpdates: (statusCode, update) =>
+    if statusCode is 204
+      throw new Error 'expected a full update on connect'
+    else
+      @announcementIndex.processUpdate update
+      @serverList.addServers @announcementIndex.getDiscoveryServers()
 
   schedulePoll: () =>
     return unless @polling
+    @poll().finally @schedulePoll
+
+  poll: () =>
     @serverList.getRandom()
       .then (server) =>
-        @discoveryWatch.watch server, @serviceName, @announcementIndex.index + 1
-          .then (update) =>
-            if response.statusCode isnt 204
-              @saveUpdates update
-              @discoveryNotifier.notifyWatchers body
+        @discoveryWatcher.watch server, @serviceName, @announcementIndex.index + 1
+          .spread (statusCode, update) =>
+            if statusCode isnt 204
+              @saveUpdates statusCode, update
+              @discoveryNotifier.notifyWatchers update
           .catch (error) =>
             @serverList.dropServer server
             @discoveryNotifier.notifyError error
-      .finally @schedulePoll
+            throw error
 
   getServers: () ->
     @serverList.servers

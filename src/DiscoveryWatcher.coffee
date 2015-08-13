@@ -35,7 +35,7 @@ class DiscoveryWatcher
   validateResponse: (response, body) ->
     #bad status code
     if response.statusCode in [200, 204]
-      return body
+      return [response.statusCode, body]
     else
       error = new Error "Bad status code " + response.statusCode + " from watch: " + response
       throw error

@@ -27,7 +27,8 @@ describe "DiscoveryWatcher", ->
         .reply(200, @reply)
 
     @discoveryWatcher.watch @discoveryServer
-      .then (body) =>
+      .spread (statusCode, body) =>
+        expect(statusCode).to.equal 200
         expect(body).to.deep.equal @reply
         watch.done()
         done()
@@ -40,7 +41,7 @@ describe "DiscoveryWatcher", ->
         .reply(200, @reply)
 
     @discoveryWatcher.watch @discoveryServer, 'foo', 100
-      .then (body) =>
+      .spread (statusCode, body) =>
         expect(body).to.deep.equal @reply
         watch.done()
         done()
