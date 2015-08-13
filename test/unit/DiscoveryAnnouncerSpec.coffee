@@ -14,7 +14,7 @@ describe "DiscoveryAnnouncer", ->
     @discoveryHost = "http://discover-host"
     @discoveryServer = "http://discover-server"
 
-    @announcer = new DiscoveryAnnouncer @logger, @discoveryHost
+    @announcer = new DiscoveryAnnouncer @logger, "discover-host"
 
     @discoAnnouncements =
       fullUpdate: true
@@ -40,7 +40,7 @@ describe "DiscoveryAnnouncer", ->
   describe "connect", ->
     it "calls watcher.connect and plucks disco only", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -52,7 +52,7 @@ describe "DiscoveryAnnouncer", ->
   describe "announce", ->
     it "sets a uuid if not there", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -76,7 +76,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() success", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -94,7 +94,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() status code error", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -113,7 +113,7 @@ describe "DiscoveryAnnouncer", ->
 
     it "announce() rejects", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(200, @discoAnnouncements)
 
@@ -132,31 +132,31 @@ describe "DiscoveryAnnouncer", ->
 
     it "watch fails status code", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(500)
- 
+
       @announcer.announce(@announcement)
         .catch (e) ->
           expect(e).to.be.ok
-          watch.done()          
+          watch.done()
           done()
 
     it "watch returns 204 instead of 200", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .reply(204)
- 
+
       @announcer.announce(@announcement)
         .catch (e) ->
           expect(e).to.be.ok
-          watch.done()          
+          watch.done()
           done()
 
     it "watch rejects", (done) ->
       watch =
-        nock("http://#{@discoveryHost}")
+        nock @discoveryHost
           .get('/watch')
           .replyWithError('rejection')
 
@@ -224,10 +224,10 @@ describe "DiscoveryAnnouncer", ->
         nock(@discoveryServer)
           .delete('/announcement/a1')
           .replyWithError('rejection')
-      
+
       @announcer.unannounce(@announcement).catch (e) ->
         expect(e).to.be.ok
-        unannounce.done()        
+        unannounce.done()
         done()
 
     it "unannouce - status code - error", (done) ->
@@ -235,7 +235,7 @@ describe "DiscoveryAnnouncer", ->
         nock(@discoveryServer)
           .delete('/announcement/a1')
           .reply(500)
-      
+
       @announcer.unannounce(@announcement).catch (e) ->
         expect(e).to.be.ok
         unannounce.done()
