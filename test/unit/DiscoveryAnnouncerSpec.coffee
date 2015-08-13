@@ -88,6 +88,8 @@ describe "DiscoveryAnnouncer", ->
       @announcer.announce(@announcement).then (result) =>
         watch.done()
         success.done()
+        announcementRecord = _.find @announcer._announcedRecords, @announcement
+        expect(announcementRecord).to.be.ok
         expect(result).to.deep.equal @announcement
         return
       .then(done).catch(done)
@@ -127,6 +129,8 @@ describe "DiscoveryAnnouncer", ->
           watch.done()
           failure.done()
           expect(e).to.be.ok
+          announcementRecord = _.find @announcer._announcedRecords, @announcement
+          expect(announcementRecord).to.be.ok
           expect(@announcer.serverList.isEmpty).to.be.ok
           done()
 
@@ -137,8 +141,10 @@ describe "DiscoveryAnnouncer", ->
           .reply(500)
 
       @announcer.announce(@announcement)
-        .catch (e) ->
+        .catch (e) =>
           expect(e).to.be.ok
+          announcementRecord = _.find @announcer._announcedRecords, @announcement
+          expect(announcementRecord).to.be.ok
           watch.done()
           done()
 
@@ -149,8 +155,10 @@ describe "DiscoveryAnnouncer", ->
           .reply(204)
 
       @announcer.announce(@announcement)
-        .catch (e) ->
+        .catch (e) =>
           expect(e).to.be.ok
+          announcementRecord = _.find @announcer._announcedRecords, @announcement
+          expect(announcementRecord).to.be.ok
           watch.done()
           done()
 
@@ -161,8 +169,10 @@ describe "DiscoveryAnnouncer", ->
           .replyWithError('rejection')
 
       @announcer.announce(@announcement)
-        .catch (e) ->
+        .catch (e) =>
           expect(e).to.be.ok
+          announcementRecord = _.find @announcer._announcedRecords, @announcement
+          expect(announcementRecord).to.be.ok
           watch.done()
           done()
 
@@ -171,14 +181,14 @@ describe "DiscoveryAnnouncer", ->
       # in this test, we won't test the server list / watch which is tested
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
-      @announcer.handleResponse {statusCode:201}, @announcement
+      @announcer._announcedRecords[@announcement.announcementId] = @announcement
       @announcement2 =
         announcementId: "a2"
         serviceType: "my-other-service"
         serviceUri: "http://my-other-service"
-      @announcer.handleResponse {statusCode:201}, @announcement2
+      @announcer._announcedRecords[@announcement2.announcementId] = @announcement2
 
-    it "pingAllAnnouncements - success", (done)->
+    it "pingAllAnnouncements - success", (done) ->
       a1Request =
         nock(@discoveryServer)
           .post('/announcement', @announcement)
@@ -194,7 +204,7 @@ describe "DiscoveryAnnouncer", ->
         return
       .then(done).catch(done)
 
-    it "pingAllAnnouncements - failure", (done)->
+    it "pingAllAnnouncements - failure", (done) ->
       #test that even if one fails the entire thing succeeds
       a1Request =
         nock(@discoveryServer)
@@ -211,6 +221,34 @@ describe "DiscoveryAnnouncer", ->
         expect(@logger.log.calledWith('error', '1 announcements failed')).to.be.ok
         return
       .then(done).catch(done)
+
+    it "pingAllAnnouncements - success after an announce failure", (done) ->
+      @announcer._announcedRecords = {} #clear all the announcements we mocked
+      delete @announcement.announcementId
+
+      @first = true
+      announce =
+        nock @discoveryServer
+          .post '/announcement'
+          .reply 500, "failed"
+      success =
+        nock @discoveryServer
+          .post '/announcement'
+          .reply (uri, body) ->
+            [201, body]
+
+      @announcer.announce(@announcement)
+        .then () ->
+          done new Error("should have failed")
+        .catch (e) =>
+          #the server failed so it was dropped. add it back again
+          @announcer.serverList.addServers [@discoveryServer]
+
+          @announcer.pingAllAnnouncements().then (announced) =>
+            expect(_.find(announced, @announcement)).to.be.ok
+            announce.done()
+            success.done()
+          .then(done).catch(done)
 
   describe "unannounce", () ->
     beforeEach ->
