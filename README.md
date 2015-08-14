@@ -35,7 +35,7 @@ When `find`ing, disco-client prefers the records that are in the *discovery regi
 
 #### Announcing & unannouncing
 
-To *announce*, describe the `serviceName` and the `serviceUri`. Note that the `serviceUri` can be anything that resolves; e.g. IP address, FQDN, etc. The disco-client returns an *lease* object, an *opaque* object that describes the announcement, so that later, the service can unannounce if it wishes to do so.
+To *announce*, describe the `serviceType` and the `serviceUri`. Note that the `serviceUri` can be anything that resolves; e.g. IP address, FQDN, etc. The disco-client returns an *lease* object, an *opaque* object that describes the announcement, so that later, the service can unannounce if it wishes to do so.
 
 Once a service *announces*, discovery servers will ping the URI with `OPTION '/'`. The service must reply success (any HTTP success code). Otherwise the *announcement* will **fail**. 
 
@@ -94,7 +94,7 @@ disco.connect(function(err) {
 });
 
 disco.announce({
-  serviceName: 'myServiceName',
+  serviceType: 'myServiceName',
   serviceUri: 'myHost'
 }, function(err, lease) {
   if(err) {
@@ -167,7 +167,7 @@ discoveryClient.connect = function(callback)
 discoveryClient.announce = function(announcement, callback)
 ```
 
-`announcement`: a hash `{serviceName: 'string', serviceUri: 'string'}`. This hash is not modified.
+`announcement`: a hash `{serviceType: 'string', serviceUri: 'string'}`. This hash is not modified.
 
 `callback`: `function(err, lease)`. Called when the announcement has succeeded in all *announcement regions*.
 
