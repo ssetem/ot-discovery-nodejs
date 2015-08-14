@@ -7,4 +7,3 @@ global.api2testHosts = {
   discoverRegionHost: 'testhost',
   announceHosts: ['testhost', 'announcehost2']
 };
-global.testServiceName= "testServiceName";
