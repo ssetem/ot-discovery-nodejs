@@ -9,7 +9,7 @@ _ = require "lodash"
 
 
 # constructor
-# DiscoveryClient(host, announcementHosts, homeRegionName, serviceName,
+# DiscoveryClient(host, announcementHosts, homeRegionName, serviceType,
 #   options)
 # @param = {String} host The hostname to the discovery server.
 # @param {Array} [annoucementHosts] An array of announcement host names
@@ -19,7 +19,7 @@ _ = require "lodash"
 #     server in the announcementHosts if you wish to announce to it.
 #
 # @param {string} [homeRegionName] The name of hosted region your sevice is in
-# @param {String} [serviceName] The name of the service you will announce as.
+# @param {String} [serviceType] The name of the service you will announce as.
 # @param {Object} [options] Options argument that takes the following:
 #      {
 #        logger: { log: function(level, message){}}
@@ -31,7 +31,7 @@ _ = require "lodash"
 # so (host, options) is valid. and will result in the old behaviour
 
 class DiscoveryClient
-  constructor: (@host, announcementHosts, homeRegionName, serviceName, @options) ->
+  constructor: (@host, announcementHosts, homeRegionName, serviceType, @options) ->
     arglength = arguments.length
     unless (arglength >= 1 and arglength <= 2) or (arglength >= 4 and arglength <= 5)
       throw new Error "Incorrect number of parameters: #{arglength}, DiscoveryClient expects 1(+1) or 4(+1)"
@@ -43,15 +43,15 @@ class DiscoveryClient
       @_announcementHosts = announcementHosts
 
     @_homeRegionName = homeRegionName || null
-    @_serviceName = serviceName || null
+    @_serviceType = serviceType || null
 
     if arguments.length >= 4
       unless Array.isArray announcementHosts # strict mode - checking announcementHosts even after massaging @_announcementHosts
         throw new  Error "announcementHosts must be an array of hostnames(strings)."
       unless typeof @_homeRegionName == "string"
         throw new  Error "homeRegionName must be a valid string."
-      unless typeof @_serviceName == "string"
-        throw new  Error "serviceName must be a valid string."
+      unless typeof @_serviceType == "string"
+        throw new  Error "serviceType must be a valid string."
 
     checkHostName = (hostname) ->
       if hostname.indexOf("http://") != -1
@@ -182,7 +182,7 @@ class DiscoveryClient
   poll: () =>
     @serverList.getRandom()
       .then (server) =>
-        @discoveryWatcher.watch server, @serviceName, @announcementIndex.index + 1
+        @discoveryWatcher.watch server, @serviceType, @announcementIndex.index + 1
           .spread (statusCode, update) =>
             if statusCode isnt 204
               @saveUpdates statusCode, update

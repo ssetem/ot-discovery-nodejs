@@ -32,7 +32,7 @@ describe "DiscoveryClient", ->
       expect(client.host).to.equal('anything')
       expect(client._announcementHosts).to.deep.equal(['anything'])
       expect(client.homeRegionName).to.not.be.ok
-      expect(client.serviceName).to.not.be.ok
+      expect(client.serviceType).to.not.be.ok
       expect(client.options).to.equal(options)
 
   it "uses logger if not passed", ->
@@ -52,7 +52,7 @@ describe "DiscoveryClient", ->
         api2testHosts.discoverRegionHost,
         api2testHosts.announceHosts,
         'homeregion',
-        testServiceName, {
+        'testService', {
           logger:
             log: () ->
         })
@@ -67,7 +67,7 @@ describe "DiscoveryClient", ->
       @expectNotToThrow ["hostname", options]
       @expectThrow ["hostname", "badannounce", null, null], 'announcementHosts must be an array of hostnames(strings).'
       @expectThrow ["hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options], 'homeRegionName must be a valid string.'
-      @expectThrow ["hostname", ['host1'],'myhostname',{notAGoodParam:''}, options], 'serviceName must be a valid string.'
+      @expectThrow ["hostname", ['host1'],'myhostname',{notAGoodParam:''}, options], 'serviceType must be a valid string.'
       @expectNotToThrow ["hostname", ['host1'],'myhostname','myServiceName', options]
       @expectThrow [], 'Incorrect number of parameters: 0, DiscoveryClient expects 1(+1) or 4(+1)'
       @expectThrow [null,null,null], 'Incorrect number of parameters: 3, DiscoveryClient expects 1(+1) or 4(+1)'
@@ -229,19 +229,19 @@ describe "DiscoveryClient", ->
           Promise.resolve(announce)
 
       announcement =
-        serviceName: 'service'
+        serviceType: 'service'
         serviceUri: 'foobar.com'
 
       @discoveryClient.announce(announcement).then (lease) =>
         expect(announcement).to.deep.equal {
-          serviceName: 'service'
+          serviceType: 'service'
           serviceUri: 'foobar.com'
         }
 
         expect(lease).to.be.ok
 
         _.each @announcers, (ann) ->
-          expect(ann.announce.firstCall.args[0].serviceName).to.equal 'service'
+          expect(ann.announce.firstCall.args[0].serviceType).to.equal 'service'
           expect(ann.announce.firstCall.args[0].serviceUri).to.equal 'foobar.com'
           expect(ann.announce.firstCall.args[0]).to.not.have.property 'announcementId'
 

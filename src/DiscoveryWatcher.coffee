@@ -5,10 +5,10 @@ url = require "url"
 class DiscoveryWatcher
   constructor: () ->
 
-  watch: (server, serviceName, index) =>
+  watch: (server, serviceType, index) =>
     query = {}
     query.since = index if index
-    query.clientServiceType = serviceName if serviceName
+    query.clientServiceType = serviceType if serviceType
 
     target = url.format
       protocol: 'http'
