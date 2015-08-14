@@ -25,7 +25,7 @@ module.exports = class DiscoveryAnnouncer
             .value()
 
   pingAllAnnouncements: () =>
-    Promise.settle _.map(@_announcedRecords, @announce)
+    Promise.settle _.map(@_announcedRecords, @refreshAnnouncement)
       .then Utils.groupPromiseInspections
       .then (resultGroups) =>
         if resultGroups.rejected.length > 0
@@ -37,6 +37,10 @@ module.exports = class DiscoveryAnnouncer
     # add the announcement to the announcement records now
     # even if the post fails, we will retry it as part of pingAllAnnouncements
     @_announcedRecords[announcement.announcementId] = announcement
+    @updateHeartbeat()
+    @refreshAnnouncement announcement
+
+  refreshAnnouncement: (announcement) =>
     @serverList.getRandom()
       .then (server) =>
         url = server + "/announcement"
@@ -75,6 +79,7 @@ module.exports = class DiscoveryAnnouncer
           unless response.statusCode in [200, 204]
             throw new Error "unable to unannounce bad status code #{response.statusCode}:#{JSON.stringify(body)} #{server}"
           delete @_announcedRecords[announcement.announcementId]
+          @updateHeartbeat()
           @logger.log "info", "Unannounce DELETE '#{url}' " +
             "returned #{response.statusCode}:#{JSON.stringify(body)}"
           return
@@ -82,11 +87,13 @@ module.exports = class DiscoveryAnnouncer
           @serverList.dropServer server
           throw e
 
-  startAnnouncementHeartbeat: () =>
-    @stopAnnouncementHeartbeat()
-    @_AnnouncementHeartbeatInterval = setInterval @pingAllAnnouncements, @HEARTBEAT_INTERVAL_MS
+  updateHeartbeat: () =>
+    if not _.isEmpty @_announcedRecords
+      if not @heartbeatInterval
+        @heartbeatInterval = setInterval @pingAllAnnouncements, @HEARTBEAT_INTERVAL_MS
+    else
+      @stopHeartbeat()
 
-  stopAnnouncementHeartbeat: () =>
-    if @_AnnouncementHeartbeatInterval
-      clearInterval @_AnnouncementHeartbeatInterval
-    @_AnnouncementHeartbeatInterval = null
+  stopHeartbeat: () ->
+      clearInterval @heartbeatInterval
+      @heartbeatInterval = null

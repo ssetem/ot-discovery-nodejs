@@ -7,3 +7,4 @@ global.api2testHosts = {
   discoverRegionHost: 'testhost',
   announceHosts: ['testhost', 'announcehost2']
 };
+global.replaceMethod = require('./helper').replaceMethod;
