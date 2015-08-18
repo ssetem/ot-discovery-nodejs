@@ -42,14 +42,11 @@ function createFilteredPaths(normalPaths, toFilterPaths) {
 }
 
 function filterPaths(filetype, pathObject) {
-  var array = [];
   var filterFunc = function(path) {
     return path.indexOf(filetype) > 0;
   };
-  array.concat(_.chain(pathObject.scripts)
-    .filter(filterFunc).value());
-  return array.concat(_.chain(pathObject.tests)
-    .filter(filterFunc).value());
+  return _.filter(pathObject.scripts, filterFunc).concat(
+    _.filter(pathObject.tests, filterFunc));
 }
 
 function test(path, opts) {
@@ -137,4 +134,3 @@ gulp.task('jslint', function() {
 gulp.task('lint', ['jslint', 'coffeelint']);
 
 gulp.task('default', ['lint', 'test-all-coverage']);
-
