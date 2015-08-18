@@ -95,5 +95,5 @@ module.exports = class DiscoveryAnnouncer
       @stopHeartbeat()
 
   stopHeartbeat: () ->
-      clearInterval @heartbeatInterval
-      @heartbeatInterval = null
+    clearInterval @heartbeatInterval
+    @heartbeatInterval = null
