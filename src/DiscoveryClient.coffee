@@ -90,7 +90,6 @@ class DiscoveryClient
       .then () =>
         @polling = true
         @schedulePoll()
-      .then @startAnnouncementHeartbeat
       .then () =>
         return [@host, @serverList.servers]
       .catch (e) =>
@@ -105,13 +104,6 @@ class DiscoveryClient
           @saveUpdates statusCode, updates
           @announcementIndex.getDiscoveryServers()
     , @RETRY_TIMES, @RETRY_BACKOFF
-
-  stopAnnouncementHeartbeat: () =>
-    _.invoke @_discoveryAnnouncers, "stopAnnouncementHeartbeat"
-
-  startAnnouncementHeartbeat: () =>
-    _.invoke @_discoveryAnnouncers, "startAnnouncementHeartbeat"
-
 
  # @param = {Object} announcement - announcement object:
  #   {
@@ -142,7 +134,6 @@ class DiscoveryClient
       throw e
     .nodeify(callback)
 
-
  # @param = {Array} announcedItemLeases - announcement array directly from
  #   DiscoveryClient.announce callback - MUST NOT BE MODIFIED- INCLUDING ORDER!
  # @param {function(err)} callback Node style callback
@@ -163,8 +154,8 @@ class DiscoveryClient
   #    that are currently active or queued.  This is critical if you plan to
   #    start and stop discovery or you might be left with open connections.
   #
-  disconnect: () ->
-    @stopAnnouncementHeartbeat()
+  disconnect: () =>
+    _.invoke @_discoveryAnnouncers, 'stopHeartbeat'
     @polling = false
     @discoveryWatcher.abort()
 

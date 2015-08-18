@@ -4,11 +4,6 @@ _ = require "lodash"
 sinon = require "sinon"
 
 describe "DiscoveryClient", ->
-  replaceMethod = (obj, method, fn) ->
-    expect(obj).to.respondTo method
-    fn ?= sinon.spy()
-    obj[method] = fn
-
   before ->
     @createDisco = (params) ->
       return new (Function.prototype.bind.apply(DiscoveryClient,[null].concat(params)))
@@ -85,7 +80,7 @@ describe "DiscoveryClient", ->
     it "creates announcers in each region", ->
       expect(@announcers).to.have.length(2)
 
-    it "connect connects, long polls, and heartbeats", (done) ->
+    it "connect connects, long polls", (done) ->
       updates =
         fullUpdate: true
         index: 1
@@ -100,7 +95,7 @@ describe "DiscoveryClient", ->
 
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
       replaceMethod @discoveryClient, 'schedulePoll'
-      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
+
       @discoveryClient.connect (err, host, servers) =>
         if err
           return done(err)
@@ -109,8 +104,6 @@ describe "DiscoveryClient", ->
           .to.be.ok
         expect(@discoveryClient.polling).to.be.ok
         expect(@discoveryClient.schedulePoll.called)
-          .to.be.ok
-        expect(@discoveryClient.startAnnouncementHeartbeat.called)
           .to.be.ok
         expect(host).to.equal(api2testHosts.discoverRegionHost)
         expect(servers).to.deep.equal(['a.disco'])
@@ -148,14 +141,12 @@ describe "DiscoveryClient", ->
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
 
       replaceMethod @discoveryClient, 'schedulePoll'
-      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
+
       @discoveryClient.reconnect()
         .then (servers) =>
           expect(@discoveryClient.announcementIndex.processUpdate.calledWith(updates))
             .to.be.ok
           expect(@discoveryClient.schedulePoll.called)
-            .to.not.be.ok
-          expect(@discoveryClient.startAnnouncementHeartbeat.called)
             .to.not.be.ok
           expect(servers).to.deep.equal ['a.disco']
           done()
@@ -179,26 +170,11 @@ describe "DiscoveryClient", ->
 
       sinon.spy @discoveryClient.announcementIndex, 'processUpdate'
       replaceMethod @discoveryClient, 'schedulePoll'
-      replaceMethod @discoveryClient, 'startAnnouncementHeartbeat'
 
       @discoveryClient.reconnect()
         .then () =>
           expect(@discoveryClient.discoveryWatcher.watch.callCount).to.equal 2
           done()
-
-    it "heartbeat start calls heartbeat on each region", ->
-      _.each @announcers, (ann) ->
-        replaceMethod ann, 'startAnnouncementHeartbeat'
-      @discoveryClient.startAnnouncementHeartbeat()
-      _.each @announcers, (ann) ->
-        expect(ann.startAnnouncementHeartbeat.called).to.be.ok
-
-    it "heartbeat stop calls heartbeat on each region", ->
-      _.each @announcers, (ann) ->
-        replaceMethod ann, 'stopAnnouncementHeartbeat'
-      @discoveryClient.stopAnnouncementHeartbeat()
-      _.each @announcers, (ann) ->
-        expect(ann.stopAnnouncementHeartbeat.called).to.be.ok
 
     it "announce sets the homeRegion if given", (done) ->
       _.each @announcers, (ann) ->
@@ -292,12 +268,14 @@ describe "DiscoveryClient", ->
         expect(err).to.be.ok
         done()
 
-    it "disconnet stops everything", ->
-      replaceMethod @discoveryClient, 'stopAnnouncementHeartbeat'
+    it "disconnect stops everything", ->
       replaceMethod @discoveryClient.discoveryWatcher, 'abort'
+      _.each @announcers, (ann) ->
+        replaceMethod ann, 'stopHeartbeat'
       @discoveryClient.disconnect()
-      expect(@discoveryClient.stopAnnouncementHeartbeat.called).to.be.ok
-      expect(@discoveryClient.discoveryWatcher.abort.called).to.be.ok
+      expect(@discoveryClient.discoveryWatcher.abort.called, 'abort called').to.be.ok
+      _.each @announcers, (ann) ->
+        expect(ann.stopHeartbeat.called, 'stop heartbeat called').to.be.ok
 
     it "find calls announcementIndex", ->
       replaceMethod @discoveryClient.announcementIndex, 'find'

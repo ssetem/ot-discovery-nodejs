@@ -50,6 +50,9 @@ describe "DiscoveryAnnouncer", ->
         done()
 
   describe "announce", ->
+    beforeEach ->
+      replaceMethod @announcer, 'updateHeartbeat'
+
     it "sets a uuid if not there", (done) ->
       watch =
         nock @discoveryHost
@@ -89,8 +92,10 @@ describe "DiscoveryAnnouncer", ->
         watch.done()
         success.done()
         announcementRecord = _.find @announcer._announcedRecords, @announcement
+        expect(@announcer.updateHeartbeat.called).to.be.ok
         expect(announcementRecord).to.be.ok
         expect(result).to.deep.equal @announcement
+
         return
       .then(done).catch(done)
 
@@ -111,6 +116,7 @@ describe "DiscoveryAnnouncer", ->
           failure.done()
           expect(e.message).to.equal 'During announce, bad status code 400:"Simulated error"'
           expect(@announcer.serverList.isEmpty).to.be.ok
+          expect(@announcer.updateHeartbeat.called).to.be.ok
           done()
 
     it "announce() rejects", (done) ->
@@ -132,6 +138,7 @@ describe "DiscoveryAnnouncer", ->
           announcementRecord = _.find @announcer._announcedRecords, @announcement
           expect(announcementRecord).to.be.ok
           expect(@announcer.serverList.isEmpty).to.be.ok
+          expect(@announcer.updateHeartbeat.called).to.be.ok
           done()
 
     it "watch fails status code", (done) ->
@@ -145,6 +152,7 @@ describe "DiscoveryAnnouncer", ->
           expect(e).to.be.ok
           announcementRecord = _.find @announcer._announcedRecords, @announcement
           expect(announcementRecord).to.be.ok
+          expect(@announcer.updateHeartbeat.called).to.be.ok
           watch.done()
           done()
 
@@ -159,6 +167,7 @@ describe "DiscoveryAnnouncer", ->
           expect(e).to.be.ok
           announcementRecord = _.find @announcer._announcedRecords, @announcement
           expect(announcementRecord).to.be.ok
+          expect(@announcer.updateHeartbeat.called).to.be.ok
           watch.done()
           done()
 
@@ -173,6 +182,7 @@ describe "DiscoveryAnnouncer", ->
           expect(e).to.be.ok
           announcementRecord = _.find @announcer._announcedRecords, @announcement
           expect(announcementRecord).to.be.ok
+          expect(@announcer.updateHeartbeat.called).to.be.ok
           watch.done()
           done()
 
@@ -237,6 +247,10 @@ describe "DiscoveryAnnouncer", ->
           .reply (uri, body) ->
             [201, body]
 
+      # so we don't have to mess with stopping the heartbeat later
+      # the call itself is tested in `announce` test suite above
+      replaceMethod @announcer, 'updateHeartbeat'
+
       @announcer.announce(@announcement)
         .then () ->
           done new Error("should have failed")
@@ -256,6 +270,7 @@ describe "DiscoveryAnnouncer", ->
       # in the suite for 'announce'
       @announcer.serverList.addServers [@discoveryServer]
       @announcer._announcedRecords[@announcement.announcementId] = @announcement
+      replaceMethod @announcer, 'updateHeartbeat'
 
     it "unannounce - error - rejection", (done) ->
       unannounce =
@@ -263,8 +278,9 @@ describe "DiscoveryAnnouncer", ->
           .delete('/announcement/a1')
           .replyWithError('rejection')
 
-      @announcer.unannounce(@announcement).catch (e) ->
+      @announcer.unannounce(@announcement).catch (e) =>
         expect(e).to.be.ok
+        expect(@announcer.updateHeartbeat.called).to.not.be.ok
         unannounce.done()
         done()
 
@@ -274,8 +290,9 @@ describe "DiscoveryAnnouncer", ->
           .delete('/announcement/a1')
           .reply(500)
 
-      @announcer.unannounce(@announcement).catch (e) ->
+      @announcer.unannounce(@announcement).catch (e) =>
         expect(e).to.be.ok
+        expect(@announcer.updateHeartbeat.called).to.not.be.ok
         unannounce.done()
         done()
 
@@ -283,14 +300,16 @@ describe "DiscoveryAnnouncer", ->
       unannounceRequest = nock(@discoveryServer)
         .delete("/announcement/a1")
         .reply(200)
-      @announcer.unannounce(@announcement).then () ->
+      @announcer.unannounce(@announcement).then () =>
+        expect(@announcer.updateHeartbeat.called).to.be.ok
         done()
       .catch(done)
 
     it "unannounce - does nothing", (done) ->
       @announcer._announcedRecords = {}
       # any actual HTTP request here will cause nock to throw an rejection
-      @announcer.unannounce(@announcement).then () ->
+      @announcer.unannounce(@announcement).then () =>
+        expect(@announcer.updateHeartbeat.called).to.not.be.ok
         done()
       .catch(done)
 
@@ -308,36 +327,97 @@ describe "DiscoveryAnnouncer", ->
       .catch (e) =>
         #it was dropped; readd it so we don't have to mock disco-request
         @announcer.serverList.addServers [@discoveryServer]
+        expect(@announcer.updateHeartbeat.called).to.not.be.ok
+        @announcer.updateHeartbeat.reset()
 
         @announcer.unannounce(@announcement)
           .then () =>
+            expect(@announcer.updateHeartbeat.called).to.be.ok
+            @announcer.updateHeartbeat.reset()
             @announcer.unannounce(@announcement)
-          .then () ->
+          .then () =>
+            expect(@announcer.updateHeartbeat.called).to.not.be.ok
             fail.done()
             success.done()
             done()
           .catch done
 
-  describe "heartbeats", () ->
-    before () ->
+  describe "heartbeats", ->
+    before ->
       @clock = sinon.useFakeTimers()
 
-    beforeEach () ->
-      @announcer.pingAllAnnouncements = sinon.spy()
+    beforeEach ->
+      replaceMethod @announcer, 'pingAllAnnouncements'
 
-    after () ->
+    afterEach ->
+      @announcer.stopHearbeat
+
+    after ->
       @clock.restore()
 
-    it "starts heartbeat", () ->
-      @announcer.startAnnouncementHeartbeat()
-      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+    it "no entries - does nothing", ->
+      @announcer.updateHeartbeat
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.called).to.not.be.ok
+
+    it "1 entry - heart beats", ->
+      @announcer._announcedRecords = {1: {}}
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
       expect(@announcer.pingAllAnnouncements.called).to.be.ok
-      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+      @announcer.pingAllAnnouncements.reset()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
       expect(@announcer.pingAllAnnouncements.called).to.be.ok
 
-    it "stops heartbeat", () ->
-      @announcer.stopAnnouncementHeartbeat()
-      @announcer.startAnnouncementHeartbeat()
-      @announcer.stopAnnouncementHeartbeat()
-      @clock.tick(@announcer.HEARTBEAT_INTERVAL_MS + 1)
+    it "1 entry - called twice - only 1 announcement per interval", ->
+      @announcer._announcedRecords = {1: {}}
+      @announcer.updateHeartbeat()
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.callCount).to.equal 1
+      @announcer.pingAllAnnouncements.reset()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.callCount).to.equal 1
+
+    it "stops heartbeat if drops to 0 entries", ->
+      @announcer._announcedRecords = {1: {}}
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.called).to.be.ok
+
+      @announcer.pingAllAnnouncements.reset()
+      @announcer._announcedRecords = {}
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+
       expect(@announcer.pingAllAnnouncements.called).to.not.be.ok
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.called).to.not.be.ok
+
+    it "restarts heartbeat", ->
+      @announcer._announcedRecords = {1: {}}
+      @announcer.updateHeartbeat()
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.called).to.be.ok
+
+      @announcer.pingAllAnnouncements.reset()
+      @announcer._announcedRecords = {}
+      @announcer.updateHeartbeat()
+
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+
+      expect(@announcer.pingAllAnnouncements.called).to.not.be.ok
+
+      @announcer._announcedRecords = {1: {}}
+      @announcer.updateHeartbeat()
+      @clock.tick @announcer.HEARTBEAT_INTERVAL_MS + 1
+      expect(@announcer.pingAllAnnouncements.called).to.be.ok
