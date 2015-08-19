@@ -59,11 +59,27 @@ describe "DiscoveryClient", ->
         logger:
           log: ()->
 
-      @expectNotToThrow ["hostname", options]
+      makeSureConstructedRight = (testDisco) ->
+        expect(testDisco).to.property '_announcementHosts'
+        expect(testDisco).to.property 'host'
+        expect(testDisco).to.property 'logger'
+        expect(testDisco).to.property 'discoveryNotifier'
+        expect(testDisco).to.property 'serverList'
+        expect(testDisco).to.property 'announcementIndex'
+        expect(testDisco).to.property 'discoveryWatcher'
+        expect(testDisco).to.property '_discoveryAnnouncers'
+        expect(testDisco._discoveryAnnouncers).to.have.length.above 0
+        return testDisco
+
+      disco = makeSureConstructedRight @expectNotToThrow(["hostname"])
+      expect(disco._announcementHosts).to.contain 'hostname'
+      makeSureConstructedRight @expectNotToThrow(["hostname", options])
+      expect(disco._announcementHosts).to.contain 'hostname'
       @expectThrow ["hostname", "badannounce", null, null], 'announcementHosts must be an array of hostnames(strings).'
       @expectThrow ["hostname", ['host1'],{notAGoodParam:''},{notAGoodParam:''}, options], 'homeRegionName must be a valid string.'
       @expectThrow ["hostname", ['host1'],'myhostname',{notAGoodParam:''}, options], 'serviceType must be a valid string.'
-      @expectNotToThrow ["hostname", ['host1'],'myhostname','myServiceName', options]
+      disco = makeSureConstructedRight @expectNotToThrow(["hostname", ['host1'],'myhostname','myServiceName', options])
+      expect(disco._announcementHosts).to.contain('host1')
       @expectThrow [], 'Incorrect number of parameters: 0, DiscoveryClient expects 1(+1) or 4(+1)'
       @expectThrow [null,null,null], 'Incorrect number of parameters: 3, DiscoveryClient expects 1(+1) or 4(+1)'
       @expectThrow [null,null,null,null,null,null], 'Incorrect number of parameters: 6, DiscoveryClient expects 1(+1) or 4(+1)'
