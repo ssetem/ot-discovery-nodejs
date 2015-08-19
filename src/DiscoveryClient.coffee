@@ -89,8 +89,9 @@ class DiscoveryClient
       .spread @saveUpdates
       .then () =>
         @polling = true
-        @schedulePoll()
-      .then () =>
+        #fire after completing the connect
+        process.nextTick () =>
+          @schedulePoll()
         return [@host, @serverList.servers]
       .catch (e) =>
         @discoveryNotifier.notifyError e
