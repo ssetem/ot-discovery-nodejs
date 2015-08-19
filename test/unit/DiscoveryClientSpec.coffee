@@ -99,16 +99,17 @@ describe "DiscoveryClient", ->
       @discoveryClient.connect (err, host, servers) =>
         if err
           return done(err)
+        #long poll starts after a process.nextTick... act accordinglys
+        process.nextTick () =>
+          expect(@discoveryClient.announcementIndex.processUpdate.calledWith(updates))
+            .to.be.ok
+          expect(@discoveryClient.polling).to.be.ok
+          expect(@discoveryClient.schedulePoll.called)
+            .to.be.ok
+          expect(host).to.equal(api2testHosts.discoverRegionHost)
+          expect(servers).to.deep.equal(['a.disco'])
 
-        expect(@discoveryClient.announcementIndex.processUpdate.calledWith(updates))
-          .to.be.ok
-        expect(@discoveryClient.polling).to.be.ok
-        expect(@discoveryClient.schedulePoll.called)
-          .to.be.ok
-        expect(host).to.equal(api2testHosts.discoverRegionHost)
-        expect(servers).to.deep.equal(['a.disco'])
-
-        done()
+          done()
 
     it "connect notifies and errors on failure", (done) ->
       replaceMethod @discoveryClient.discoveryWatcher, 'watch', sinon.spy () ->
