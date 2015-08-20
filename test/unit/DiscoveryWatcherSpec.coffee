@@ -20,19 +20,22 @@ describe "DiscoveryWatcher", ->
   afterEach ->
     nock.cleanAll()
 
-  it "watches with just a server", (done) ->
-    watch =
+  it "watches with just a server using uri or hostname", (done) ->
+    
+    watchfunc = (server) =>
+      watch =
       nock("http://" + @discoveryServer)
         .get('/watch')
         .reply(200, @reply)
 
-    @discoveryWatcher.watch @discoveryServer
+      @discoveryWatcher.watch server
       .spread (statusCode, body) =>
         expect(statusCode).to.equal 200
         expect(body).to.deep.equal @reply
         watch.done()
-        done()
-      .catch done
+
+    Promise.join watchfunc(@discoveryServer), watchfunc("http://" + @discoveryServer), done
+    .catch done
 
   it "watches with servicename and index", (done) ->
     watch =
