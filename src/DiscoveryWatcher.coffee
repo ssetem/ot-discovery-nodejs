@@ -12,10 +12,9 @@ class DiscoveryWatcher
 
     target = url.format
       protocol: 'http'
-      host: server
+      host: server.replace /[h|H]\w+:\/\//, '' #remove http://, https://
       pathname: "watch"
       query: query
-
     # we have to hand promisify here so we can grab the request object
     # for aborting purposes
     new Promise (resolve, reject) =>
