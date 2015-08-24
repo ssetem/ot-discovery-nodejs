@@ -41,7 +41,7 @@ Once a service *announces*, discovery servers will ping the URI with `OPTION '/'
 
 Once *announced*, the service must continually reannounce. The disco-client reannounces every 10 seconds.
 
-It is possible and indeed sometimes necessary to announce in multiple regions. When announcing in multiple regions, describe the `homeRegion`. This is the name of the region the server is physically hosted in. For example, it is possible to announce in the `discovery-sc` region that a service is available, but hosted in `discovery-uswest2`. 
+It is possible and indeed sometimes necessary to announce in multiple regions. When announcing in multiple regions, describe the `homeRegion`. This is the name of the region the server is physically hosted in. For example, it is possible to announce in the `prod-sc` region that a service is available, but hosted in `prod-uswest2`. 
 
 #### Good design practices
 
@@ -82,7 +82,7 @@ Consider adding production logging or alerting when these errors are logged, and
 var discovery = require("ot-discovery");
 var disco = new discovery('discovery-sc.otenv.com',
   ['discovery-sc.otenv.com', 'discovery-uswest2.otenv.com'],
-  'discovery-sc', 'myServiceName', { /* options */});
+  'prod-sc', 'myServiceName', { /* options */});
 
 disco.connect(function(err) {
   if(err) {
@@ -126,7 +126,7 @@ DiscoveryClient(discoveryHost, announcementHosts, homeRegionName, serviceName, o
 
 `announcementHosts`: an array of well-known names for announcing in
 
-`homeRegionName`: the name of the region that the service will be hosted in. This is **not** `discovery-sc.otenv.com`, but `discovery-sc`.
+`homeRegionName`: the name of the region that the service will be hosted in. This is **not** `discovery-sc.otenv.com`, but one of the following: `ci-sf`, `pp-sf`, `pp-uswest2`, `prod-sc`, `prod-uswest2`, `prod-ln` or `prod-euwest1`.
 
 `serviceName`: the name of the service that is discovering in the discovery region. This does **not** have to be the same name as the name of the service that might be announced, but in general, is likely to be.
 
