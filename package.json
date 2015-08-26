@@ -26,6 +26,7 @@
     "chai": "^3.0.0",
     "dispatch": "^1.0.0",
     "gulp": "^3.9.0",
+    "gulp-sequence": "^0.4.1",
     "nock": "~2.1.0",
     "ot-gulp-release-tasks": "^0.0.x",
     "quip": "^0.1.2",
