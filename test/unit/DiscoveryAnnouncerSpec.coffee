@@ -72,9 +72,14 @@ describe "DiscoveryAnnouncer", ->
       @announcer.announce
         serviceType: "test"
         serviceUri: "test"
-      .then (result) ->
+      .then (result) =>
         expect(result).to.have.property('announcementId')
           .to.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)
+        announcementId = result.announcementId
+        expect(@logger.log.getCall(1).args).to.deep.equal [
+          'debug',
+          """Announcing to http://discover-server/announcement{"serviceType":"test","serviceUri":"test","announcementId":"#{announcementId}"}"""
+        ]
         done()
 
     it "announce() success", (done) ->
@@ -139,6 +144,38 @@ describe "DiscoveryAnnouncer", ->
           expect(announcementRecord).to.be.ok
           expect(@announcer.serverList.isEmpty).to.be.ok
           expect(@announcer.updateHeartbeat.called).to.be.ok
+          expect(@logger.log.getCalls()[2].args).to.deep.equal  [
+            'error',
+            'Failure Announcing to http://discover-server/announcement{"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080"}'
+            'rejection'
+          ]
+          done()
+
+
+    it "announce() exceed request timeout", (done) ->
+      @announcer.REQUEST_TIMEOUT_MS = 1000
+      watch =
+        nock @discoveryHost
+          .get('/watch')
+          .reply(200, @discoAnnouncements)
+
+      delayedAnnouncement =
+        nock(@discoveryServer)
+          .post('/announcement', @announcement)
+          .socketDelay(2000)
+          .reply(200)
+
+      @announcer.announce(@announcement)
+        .catch (e) =>
+          expect(e.message).to.equal "ESOCKETTIMEDOUT"
+          expect(@announcer.serverList.servers).to.deep.equal []
+          logs = _.pluck @logger.log.getCalls(), "args"
+          expect(logs).deep.equal [
+            [ 'info',  'Syncing discovery servers http://discover-server' ],
+            [ 'debug', 'Announcing to http://discover-server/announcement{"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080"}' ],
+            [ 'error', 'Failure Announcing to http://discover-server/announcement{"announcementId":"a1","serviceType":"my-new-service","serviceUri":"http://my-new-service:8080"}','ESOCKETTIMEDOUT' ],
+            [ 'info', 'Dropping discovery server http://discover-server' ]
+          ]
           done()
 
     it "watch fails status code", (done) ->
